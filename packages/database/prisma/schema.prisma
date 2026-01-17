@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  timezone  String   @default("Asia/Kolkata")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users  User[]
+  spaces Space[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String
+  name      String
+  avatarUrl String?
+  googleId  String
+  role      Role     @default(MEMBER)
+  orgId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([email, orgId])
+  @@unique([googleId, orgId])
+  @@index([orgId])
+}
+
+model Space {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  capacity    Int      @default(1)
+  isActive    Boolean  @default(true)
+  orgId       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org      Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  rules    BookingRules?
+  bookings Booking[]
+
+  @@index([orgId])
+}
+
+model BookingRules {
+  id              String  @id @default(uuid())
+  spaceId         String  @unique
+  slotDurationMin Int     @default(60)
+  openTime        String  @default("09:00")
+  closeTime       String  @default("21:00")
+  maxAdvanceDays  Int     @default(7)
+  maxDurationMin  Int     @default(120)
+  allowRecurring  Boolean @default(false)
+  bufferMinutes   Int     @default(0)
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  spaceId      String
+  userId       String
+  startTime    DateTime
+  endTime      DateTime
+  status       BookingStatus @default(CONFIRMED)
+  participants Json          @default("[]")
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId, startTime, endTime])
+  @@index([userId])
+  @@index([spaceId, status])
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}

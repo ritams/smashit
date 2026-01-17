@@ -1,0 +1,27 @@
+{
+    "name": "@smashit/api",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js"
+    },
+    "dependencies": {
+        "@smashit/database": "workspace:*",
+        "@smashit/types": "workspace:*",
+        "@smashit/validators": "workspace:*",
+        "bullmq": "^5.34.3",
+        "cors": "^2.8.5",
+        "express": "^4.21.2",
+        "ioredis": "^5.4.2",
+        "zod": "^3.24.1"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.0",
+        "@types/node": "^22.10.5",
+        "tsx": "^4.19.2",
+        "typescript": "^5.3.3"
+    }
+}
