@@ -127,6 +127,17 @@ adminRoutes.patch('/spaces/:spaceId', async (req: AuthRequest, res, next) => {
         const { spaceId } = req.params as { spaceId: string };
         const data = updateSpaceSchema.parse(req.body);
 
+        // Verify space belongs to this org
+        const existingSpace = await prisma.space.findFirst({
+            where: { id: spaceId, orgId: req.org!.id },
+        });
+        if (!existingSpace) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'SPACE_NOT_FOUND', message: 'Space not found or does not belong to this organization' },
+            });
+        }
+
         const space = await prisma.space.update({
             where: { id: spaceId },
             data,
@@ -166,6 +177,17 @@ adminRoutes.patch('/spaces/:spaceId/rules', async (req: AuthRequest, res, next) 
     try {
         const { spaceId } = req.params as { spaceId: string };
         const data = updateBookingRulesSchema.parse(req.body);
+
+        // Verify space belongs to this org
+        const existingSpace = await prisma.space.findFirst({
+            where: { id: spaceId, orgId: req.org!.id },
+        });
+        if (!existingSpace) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'SPACE_NOT_FOUND', message: 'Space not found or does not belong to this organization' },
+            });
+        }
 
         const rules = await prisma.bookingRules.update({
             where: { spaceId },
@@ -216,6 +238,17 @@ adminRoutes.post('/spaces/rules/bulk', async (req: AuthRequest, res, next) => {
 adminRoutes.delete('/spaces/:spaceId', async (req: AuthRequest, res, next) => {
     try {
         const { spaceId } = req.params as { spaceId: string };
+
+        // Verify space belongs to this org
+        const existingSpace = await prisma.space.findFirst({
+            where: { id: spaceId, orgId: req.org!.id },
+        });
+        if (!existingSpace) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'SPACE_NOT_FOUND', message: 'Space not found or does not belong to this organization' },
+            });
+        }
 
         await prisma.space.update({
             where: { id: spaceId },

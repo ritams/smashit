@@ -41,6 +41,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn, getInitials } from '@/lib/utils';
 import { API_URL } from '@/lib/config';
 import { AllSpacesView } from '@/components/booking/AllSpacesView';
+import { useSSE } from '@/hooks/use-sse';
 import { LayoutGrid, List } from 'lucide-react';
 
 interface Slot {
@@ -228,6 +229,19 @@ export default function BookPage() {
             fetchSlots();
         }
     }, [fetchSlots, viewMode]);
+
+    // SSE for real-time updates - refetch when other users create/cancel bookings
+    useSSE({
+        orgSlug,
+        onMessage: (msg) => {
+            if (msg.type === 'BOOKING_CREATED' || msg.type === 'BOOKING_CANCELLED') {
+                // Refresh all spaces view
+                setAllSpacesRefreshKey(prev => prev + 1);
+                // Refresh single space view
+                fetchSlots();
+            }
+        },
+    });
 
     // Handle booking
     const handleBook = async () => {

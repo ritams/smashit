@@ -1,7 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@smashit/database';
+import { updateUserProfileSchema } from '@smashit/validators';
 
-export const userRoutes = Router();
+export const userRoutes: Router = Router();
 
 // Get current user's organizations (memberships)
 userRoutes.get('/me/orgs', async (req: Request, res: Response, next: NextFunction) => {
@@ -115,7 +116,6 @@ userRoutes.get('/me', async (req: Request, res: Response, next: NextFunction) =>
 userRoutes.patch('/me', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userEmail = req.headers['x-user-email'] as string;
-        const { name, phoneNumber, registrationId } = req.body;
 
         if (!userEmail) {
             return res.status(401).json({
@@ -123,6 +123,9 @@ userRoutes.patch('/me', async (req: Request, res: Response, next: NextFunction) 
                 error: { code: 'UNAUTHORIZED', message: 'Not logged in' },
             });
         }
+
+        // Validate input
+        const { name, phoneNumber, registrationId } = updateUserProfileSchema.parse(req.body);
 
         const updatedUser = await prisma.user.update({
             where: { email: userEmail },

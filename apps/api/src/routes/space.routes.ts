@@ -1,11 +1,8 @@
 import { Router } from 'express';
 import { prisma } from '@smashit/database';
 import { getAvailabilitySchema } from '@smashit/validators';
-import { fromZonedTime, toZonedTime } from 'date-fns-tz';
-import { startOfDay as getStartOfDay, addHours, addMinutes } from 'date-fns';
 
 import { orgMiddleware, OrgRequest } from '../middleware/org.middleware.js';
-import { authMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
 import { getDetailedSpaceAvailability } from '../services/availability.service.js';
 
 export const spaceRoutes: Router = Router({ mergeParams: true });
@@ -37,7 +34,6 @@ spaceRoutes.get('/', async (req: OrgRequest, res, next) => {
 // Get availability for ALL spaces on a specific date
 spaceRoutes.get('/all/availability', async (req: OrgRequest, res, next) => {
     try {
-        console.log('[API] /all/availability called', { query: req.query, params: req.params });
         const { date, timezone: queryTimezone } = getAvailabilitySchema
             .omit({ spaceId: true })
             .parse(req.query);
@@ -48,16 +44,12 @@ spaceRoutes.get('/all/availability', async (req: OrgRequest, res, next) => {
                 isActive: true,
             },
         });
-        console.log('[API] Found spaces:', spaces.length, spaces.map(s => s.id));
 
         const availabilityPromises = spaces.map(space =>
             getDetailedSpaceAvailability({
                 spaceId: space.id,
                 date,
                 orgTimezone: queryTimezone || req.org?.timezone
-            }).catch(err => {
-                console.error(`[API] Error fetching availability for space ${space.id}:`, err);
-                throw err;
             })
         );
 
@@ -68,23 +60,15 @@ spaceRoutes.get('/all/availability', async (req: OrgRequest, res, next) => {
             data: results
         });
     } catch (error) {
-        console.error('[API] /all/availability failed:', error);
         next(error);
     }
 });
 
-// Get availability for a space on a specific date (Move to top)
+// Get availability for a space on a specific date
 // Regex enforces UUID format to avoid matching 'all'
 spaceRoutes.get('/:spaceId([0-9a-fA-F\\-]{36})/availability', async (req: OrgRequest, res, next) => {
     try {
-        let { spaceId } = req.params as { spaceId: string };
-
-        // URL is like /UUID/availability...
-        const parts = req.url.split('/');
-        // parts[0] is empty, parts[1] is UUID, parts[2] is availability
-        if (parts.length > 1) {
-            spaceId = parts[1];
-        }
+        const { spaceId } = req.params as { spaceId: string };
 
         const { date, timezone: queryTimezone } = getAvailabilitySchema.parse({
             ...req.query,

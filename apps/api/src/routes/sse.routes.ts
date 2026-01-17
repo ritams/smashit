@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@smashit/database';
 import { addSSEConnection, removeSSEConnection } from '../services/sse.service.js';
 
-export const sseRoutes = Router();
+export const sseRoutes: Router = Router();
 
 // SSE endpoint for real-time updates
 sseRoutes.get('/', async (req: Request, res: Response) => {
@@ -40,17 +40,14 @@ sseRoutes.get('/', async (req: Request, res: Response) => {
     // Add to connections
     addSSEConnection(org.id, res);
 
-    // Handle client disconnect
-    req.on('close', () => {
-        removeSSEConnection(org.id, res);
-    });
-
     // Keep connection alive with periodic heartbeats
     const heartbeat = setInterval(() => {
         res.write(': heartbeat\n\n');
     }, 30000);
 
+    // Handle client disconnect - single handler for cleanup
     req.on('close', () => {
+        removeSSEConnection(org.id, res);
         clearInterval(heartbeat);
     });
 });
