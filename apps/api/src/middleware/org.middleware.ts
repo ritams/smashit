@@ -23,7 +23,7 @@ export async function orgMiddleware(
         }
 
         const org = await prisma.organization.findUnique({
-            where: { slug },
+            where: { slug: slug as string },
             select: { id: true, slug: true, timezone: true },
         });
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@smashit/database';
 import { z } from 'zod';
+import { findOrCreateUser } from '../services/user.service.js';
 
 export const orgRoutes: Router = Router();
 
@@ -17,7 +18,7 @@ orgRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) 
         const { slug } = req.params;
 
         const org = await prisma.organization.findUnique({
-            where: { slug },
+            where: { slug: slug as string },
             select: {
                 id: true,
                 name: true,
@@ -80,21 +81,13 @@ orgRoutes.post('/', async (req: Request, res: Response, next: NextFunction) => {
             });
         }
 
-        // Find or create the user
-        let user = await prisma.user.findUnique({
-            where: { email: userEmail },
+        // Use shared user service
+        const user = await findOrCreateUser({
+            email: userEmail,
+            name: userName,
+            googleId: userGoogleId,
+            avatarUrl: userAvatar,
         });
-
-        if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    email: userEmail,
-                    name: userName || userEmail.split('@')[0],
-                    googleId: userGoogleId || `google-${Date.now()}`,
-                    avatarUrl: userAvatar || null,
-                },
-            });
-        }
 
         // Create organization
         const org = await prisma.organization.create({
@@ -133,7 +126,7 @@ orgRoutes.get('/check-slug/:slug', async (req: Request, res: Response, next: Nex
         const { slug } = req.params;
 
         const existing = await prisma.organization.findUnique({
-            where: { slug },
+            where: { slug: slug as string },
             select: { id: true },
         });
 

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import { prisma } from '@smashit/database';
 import { createError } from './error.middleware.js';
 import { OrgRequest } from './org.middleware.js';
+import { findOrCreateUser, ensureMembership } from '../services/user.service.js';
 
 export interface AuthRequest extends OrgRequest {
     user?: {
@@ -30,20 +30,12 @@ export async function authMiddleware(
             throw createError('Authentication required', 401, 'UNAUTHORIZED');
         }
 
-        // Find or create global user
-        let user = await prisma.user.findUnique({
-            where: { email: userEmail },
+        // Use shared user service
+        const user = await findOrCreateUser({
+            email: userEmail,
+            name: userName,
+            googleId: userGoogleId,
         });
-
-        if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    email: userEmail,
-                    name: userName || userEmail.split('@')[0],
-                    googleId: userGoogleId || `google-${Date.now()}`,
-                },
-            });
-        }
 
         req.user = {
             id: user.id,
@@ -51,28 +43,9 @@ export async function authMiddleware(
             name: user.name,
         };
 
-        // If there's an org context, check membership
+        // If there's an org context, check/create membership
         if (req.org?.id) {
-            let membership = await prisma.membership.findUnique({
-                where: {
-                    userId_orgId: {
-                        userId: user.id,
-                        orgId: req.org.id,
-                    },
-                },
-            });
-
-            // Auto-create membership as MEMBER if doesn't exist
-            if (!membership) {
-                membership = await prisma.membership.create({
-                    data: {
-                        userId: user.id,
-                        orgId: req.org.id,
-                        role: 'MEMBER',
-                    },
-                });
-            }
-
+            const membership = await ensureMembership(user.id, req.org.id, 'MEMBER');
             req.membership = {
                 id: membership.id,
                 role: membership.role as 'ADMIN' | 'MEMBER',

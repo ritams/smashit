@@ -1,12 +1,13 @@
-import { Router } from 'express';
+import { Router, IRouter } from 'express';
 import { prisma } from '@smashit/database';
 import { createBookingSchema } from '@smashit/validators';
 import { orgMiddleware } from '../middleware/org.middleware.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
 import { bookingQueue, bookingQueueEvents } from '../lib/queue.js';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
+import { bookingLimiter } from '../lib/core.js';
 
-export const bookingRoutes = Router({ mergeParams: true });
+export const bookingRoutes: IRouter = Router({ mergeParams: true });
 
 // Apply middleware
 bookingRoutes.use(orgMiddleware);
@@ -69,8 +70,8 @@ bookingRoutes.get('/my', async (req: AuthRequest, res, next) => {
 });
 
 
-// Create a booking (via queue)
-bookingRoutes.post('/', async (req: AuthRequest, res, next) => {
+// Create a booking (via queue) - rate limited
+bookingRoutes.post('/', bookingLimiter, async (req: AuthRequest, res, next) => {
     try {
         const data = createBookingSchema.parse(req.body);
 
@@ -92,7 +93,7 @@ bookingRoutes.post('/', async (req: AuthRequest, res, next) => {
         }
 
         // Add to queue for processing
-        const job = await bookingQueue.add('create-booking', {
+        const job = await (bookingQueue as any).add('create-booking', {
             spaceId: data.spaceId,
             userId: req.user!.id,
             userName: req.user!.name,
@@ -138,7 +139,7 @@ bookingRoutes.post('/', async (req: AuthRequest, res, next) => {
 // Cancel a booking
 bookingRoutes.delete('/:bookingId', async (req: AuthRequest, res, next) => {
     try {
-        const { bookingId } = req.params;
+        const bookingId = req.params.bookingId as string;
 
         const booking = await prisma.booking.findFirst({
             where: {

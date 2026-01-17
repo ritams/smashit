@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { createLogger } from '../lib/core.js';
+
+const log = createLogger('Error');
 
 export interface ApiError extends Error {
     statusCode?: number;
@@ -12,7 +15,7 @@ export function errorHandler(
     res: Response,
     _next: NextFunction
 ) {
-    console.error('Error:', err.message, err.code, err.stack);
+    log.error(err.message, { code: err.code, stack: err.stack });
 
     if (err instanceof ZodError) {
         return res.status(400).json({
@@ -41,3 +44,4 @@ export function createError(message: string, statusCode: number, code: string): 
     error.code = code;
     return error;
 }
+

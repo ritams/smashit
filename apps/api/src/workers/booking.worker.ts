@@ -4,10 +4,13 @@ import { redis } from '../lib/redis.js';
 import { BookingJobData } from '../lib/queue.js';
 import { startOfDay, addDays, isAfter, endOfDay } from 'date-fns';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
+import { createLogger } from '../lib/core.js';
+
+const log = createLogger('BookingWorker');
 
 export const processBooking = async (job: Job<BookingJobData>) => {
     const { spaceId, userId, userName, startTime, endTime, participants, notes, slotIndex, slotId, orgId } = job.data;
-    console.log(`[Worker] Processing booking: spaceId=${spaceId}, userId=${userId}, slotIndex=${slotIndex}, slotId=${slotId}`);
+    log.info('Processing booking', { spaceId, userId, slotIndex, slotId });
 
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -84,7 +87,7 @@ export const processBooking = async (job: Job<BookingJobData>) => {
                 }
             });
 
-            console.log(`[Worker] Rule check: maxBookingsPerUserPerDay=${rules.maxBookingsPerUserPerDay}, userBookingsToday=${userBookingsToday}, spaceType=${space.type}, sameTypeSpaces=${sameTypeSpaceIds.length}`);
+            log.debug('Rule check', { maxBookingsPerUserPerDay: rules.maxBookingsPerUserPerDay, userBookingsToday, spaceType: space.type, sameTypeSpaces: sameTypeSpaceIds.length });
 
             if (userBookingsToday >= rules.maxBookingsPerUserPerDay) {
                 throw new Error('MAX_BOOKINGS_PER_USER_PER_DAY_EXCEEDED');
@@ -219,16 +222,16 @@ let worker: Worker | null = null;
 
 export async function startBookingWorker() {
     worker = new Worker<BookingJobData>('bookings', processBooking, {
-        connection: redis,
+        connection: redis as any, // Cast to bypass ioredis version mismatch
         concurrency: 5,
     });
 
     worker.on('completed', (job) => {
-        console.log(`✅ Booking ${job.id} completed`);
+        log.info('Booking completed', { jobId: job.id });
     });
 
     worker.on('failed', (job, err) => {
-        console.error(`❌ Booking ${job?.id} failed:`, err.message);
+        log.error('Booking failed', { jobId: job?.id, error: err.message });
     });
 
     return worker;

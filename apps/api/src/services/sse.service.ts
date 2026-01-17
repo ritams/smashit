@@ -1,5 +1,8 @@
 import { Response } from 'express';
 import type { SSEMessage } from '@smashit/types';
+import { createLogger } from '../lib/core.js';
+
+const log = createLogger('SSE');
 
 // Store connections by orgId
 const connections = new Map<string, Set<Response>>();
@@ -9,8 +12,7 @@ export function addSSEConnection(orgId: string, res: Response) {
         connections.set(orgId, new Set());
     }
     connections.get(orgId)!.add(res);
-
-    console.log(`📡 SSE client connected for org: ${orgId} (${connections.get(orgId)!.size} total)`);
+    log.info('Client connected', { orgId, total: connections.get(orgId)!.size });
 }
 
 export function removeSSEConnection(orgId: string, res: Response) {
@@ -20,7 +22,7 @@ export function removeSSEConnection(orgId: string, res: Response) {
         if (orgConnections.size === 0) {
             connections.delete(orgId);
         }
-        console.log(`📡 SSE client disconnected for org: ${orgId}`);
+        log.info('Client disconnected', { orgId });
     }
 }
 
@@ -36,10 +38,11 @@ export function broadcastBookingUpdate(orgId: string, message: SSEMessage) {
         try {
             res.write(data);
         } catch (err) {
-            console.error('Failed to send SSE message:', err);
+            log.error('Failed to send SSE message', { error: (err as Error).message });
             orgConnections.delete(res);
         }
     }
 
-    console.log(`📤 Broadcasted ${message.type} to ${orgConnections.size} clients for org: ${orgId}`);
+    log.debug('Broadcasted', { type: message.type, clientCount: orgConnections.size, orgId });
 }
+

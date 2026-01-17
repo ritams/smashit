@@ -8,9 +8,14 @@ import { adminRoutes } from './routes/admin.routes.js';
 import { sseRoutes } from './routes/sse.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { startBookingWorker } from './workers/booking.worker.js';
+import { validateEnv, generalLimiter, createLogger } from './lib/core.js';
 
+const log = createLogger('Server');
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// Validate environment on startup
+validateEnv();
 
 // Middleware
 app.use(cors({
@@ -18,6 +23,9 @@ app.use(cors({
     credentials: true,
 }));
 app.use(express.json());
+
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -38,18 +46,17 @@ app.use(errorHandler);
 // Start server and worker
 async function start() {
     try {
-        // Start booking queue worker
         await startBookingWorker();
-        console.log('📦 Booking worker started');
-        console.log('📦 Server restarting...');
+        log.info('Booking worker started');
 
         app.listen(PORT, () => {
-            console.log(`🚀 API server running on http://localhost:${PORT}`);
+            log.info(`API server running on http://localhost:${PORT}`);
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        log.error('Failed to start server', { error: (error as Error).message });
         process.exit(1);
     }
 }
 
 start();
+

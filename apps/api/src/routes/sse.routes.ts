@@ -1,12 +1,27 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@smashit/database';
 import { addSSEConnection, removeSSEConnection } from '../services/sse.service.js';
+import { sseLimiter, createLogger } from '../lib/core.js';
+
+const log = createLogger('SSERoutes');
 
 export const sseRoutes: Router = Router();
+
+// Apply rate limiting to SSE connections
+sseRoutes.use(sseLimiter);
 
 // SSE endpoint for real-time updates
 sseRoutes.get('/', async (req: Request, res: Response) => {
     const { orgSlug } = req.query;
+    const userEmail = req.headers['x-user-email'] as string;
+
+    // Require authentication for SSE
+    if (!userEmail) {
+        return res.status(401).json({
+            success: false,
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required for real-time updates' },
+        });
+    }
 
     if (!orgSlug || typeof orgSlug !== 'string') {
         return res.status(400).json({
@@ -51,3 +66,4 @@ sseRoutes.get('/', async (req: Request, res: Response) => {
         clearInterval(heartbeat);
     });
 });
+
