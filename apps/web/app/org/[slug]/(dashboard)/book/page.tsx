@@ -142,9 +142,28 @@ export default function BookPage() {
         setMounted(true);
     }, []);
 
-    useEffect(() => {
-        setViewDate(selectedDate);
-    }, [selectedDate]);
+    // Only shift the week view if the selected date is outside the visible 7-day range
+    // Using a function component approach to avoid dependency on viewDate which causes arrow conflicts
+    const handleSelectedDateChange = (date: Date, currentViewDate: Date) => {
+        const weekStart = startOfDay(currentViewDate);
+        const weekEnd = endOfDay(addDays(currentViewDate, 6));
+
+        // If date is before the current week start or after the week end, shift the view
+        if (isBefore(date, weekStart) || isAfter(date, weekEnd)) {
+            return date;
+        }
+        return null; // No change needed
+    };
+
+    // Effect that only runs when selectedDate changes (not viewDate)
+    const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
+    if (selectedDate !== prevSelectedDate) {
+        setPrevSelectedDate(selectedDate);
+        const newViewDate = handleSelectedDateChange(selectedDate, viewDate);
+        if (newViewDate) {
+            setViewDate(newViewDate);
+        }
+    }
 
     // Generate week dates from viewDate
     const weekDates = Array.from({ length: 7 }, (_, i) => addDays(viewDate, i));
@@ -320,7 +339,6 @@ export default function BookPage() {
                                         onSelect={(date) => {
                                             if (date) {
                                                 setSelectedDate(date);
-                                                setViewDate(date);
                                             }
                                         }}
                                         initialFocus
