@@ -14,11 +14,14 @@ export const createBookingSchema = z.object({
         .optional()
         .default([]),
     notes: z.string().max(500).optional(),
+    slotIndex: z.number().int().min(0).optional(),
+    slotId: z.string().uuid().optional(),
 });
 
 export const getAvailabilitySchema = z.object({
     spaceId: z.string().uuid(),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    timezone: z.string().optional(),
 });
 
 export const cancelBookingSchema = z.object({

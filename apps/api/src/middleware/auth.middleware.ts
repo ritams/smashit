@@ -8,59 +8,91 @@ export interface AuthRequest extends OrgRequest {
         id: string;
         email: string;
         name: string;
+    };
+    membership?: {
+        id: string;
         role: 'ADMIN' | 'MEMBER';
-        orgId: string;
     };
 }
 
-// For now, we'll use a simple header-based auth
-// This will be replaced with proper JWT validation from NextAuth
+// Auth middleware - finds or creates global user, then checks membership
 export async function authMiddleware(
     req: AuthRequest,
     _res: Response,
     next: NextFunction
 ) {
     try {
-        const userId = req.headers['x-user-id'] as string;
         const userEmail = req.headers['x-user-email'] as string;
+        const userName = req.headers['x-user-name'] as string;
+        const userGoogleId = req.headers['x-user-google-id'] as string;
 
-        if (!userId || !userEmail) {
+        if (!userEmail) {
             throw createError('Authentication required', 401, 'UNAUTHORIZED');
         }
 
-        const user = await prisma.user.findFirst({
-            where: {
-                id: userId,
-                email: userEmail,
-                orgId: req.org?.id,
-            },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                role: true,
-                orgId: true,
-            },
+        // Find or create global user
+        let user = await prisma.user.findUnique({
+            where: { email: userEmail },
         });
 
         if (!user) {
-            throw createError('User not found', 401, 'UNAUTHORIZED');
+            user = await prisma.user.create({
+                data: {
+                    email: userEmail,
+                    name: userName || userEmail.split('@')[0],
+                    googleId: userGoogleId || `google-${Date.now()}`,
+                },
+            });
         }
 
-        req.user = user;
+        req.user = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+        };
+
+        // If there's an org context, check membership
+        if (req.org?.id) {
+            let membership = await prisma.membership.findUnique({
+                where: {
+                    userId_orgId: {
+                        userId: user.id,
+                        orgId: req.org.id,
+                    },
+                },
+            });
+
+            // Auto-create membership as MEMBER if doesn't exist
+            if (!membership) {
+                membership = await prisma.membership.create({
+                    data: {
+                        userId: user.id,
+                        orgId: req.org.id,
+                        role: 'MEMBER',
+                    },
+                });
+            }
+
+            req.membership = {
+                id: membership.id,
+                role: membership.role as 'ADMIN' | 'MEMBER',
+            };
+        }
+
         next();
     } catch (error) {
         next(error);
     }
 }
 
+// Admin middleware - requires ADMIN role in the org
 export async function adminMiddleware(
     req: AuthRequest,
     _res: Response,
     next: NextFunction
 ) {
     try {
-        if (req.user?.role !== 'ADMIN') {
+        if (!req.membership || req.membership.role !== 'ADMIN') {
             throw createError('Admin access required', 403, 'FORBIDDEN');
         }
         next();

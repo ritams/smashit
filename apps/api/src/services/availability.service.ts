@@ -1,96 +1,120 @@
 import { prisma } from '@smashit/database';
+import { fromZonedTime } from 'date-fns-tz';
+import { addHours, addMinutes } from 'date-fns';
 
 export interface AvailabilityParams {
     spaceId: string;
     date: string; // YYYY-MM-DD
-    orgTimezone: string;
+    orgTimezone: string | undefined;
 }
+// ... (keep TimeSlot interface)
 
-export interface TimeSlot {
-    startTime: Date;
-    endTime: Date;
-    isAvailable: boolean;
-    booking?: {
-        id: string;
-        userId: string;
-        userName: string;
-        userAvatar?: string;
-        participants: Array<{ name: string; email?: string }>;
-    };
-}
+export async function getDetailedSpaceAvailability(params: AvailabilityParams): Promise<{ space: any; slots: any[] }> {
+    const { spaceId, date, orgTimezone } = params;
+    console.log(`[Service] getDetailedSpaceAvailability for space ${spaceId} date ${date} tz ${orgTimezone}`);
 
-export async function getSpaceAvailability(params: AvailabilityParams): Promise<TimeSlot[]> {
-    const { spaceId, date } = params;
-
-    // Get space with rules
     const space = await prisma.space.findUnique({
         where: { id: spaceId },
-        include: { rules: true },
+        include: {
+            rules: true,
+            slots: { orderBy: { number: 'asc' } },
+        },
     });
 
     if (!space || !space.rules) {
-        return [];
+        console.error(`[Service] Space ${spaceId} not found or rules missing`);
+        throw new Error('Space not found or rules missing');
     }
 
+    const timezone = orgTimezone || 'UTC';
     const { rules } = space;
 
-    // Parse date and create time range
-    const dayStart = new Date(`${date}T${rules.openTime}:00.000Z`);
-    const dayEnd = new Date(`${date}T${rules.closeTime}:00.000Z`);
+    // 1. Determine "Start of Day" in the requested timezone
+    const clientDateString = `${date}T00:00:00`;
+    const startOfDayUTC = fromZonedTime(clientDateString, timezone);
+    // ... rest of the function remains same, just ensuring logic is preserved
+    // Parse open and close times from rules (e.g., "09:00", "17:00")
+    const [openHourStr, openMinuteStr] = rules.openTime.split(':');
+    const [closeHourStr, closeMinuteStr] = rules.closeTime.split(':');
+
+    const openHour = parseInt(openHourStr, 10);
+    const openMinute = parseInt(openMinuteStr, 10);
+    const closeHour = parseInt(closeHourStr, 10);
+    const closeMinute = parseInt(closeMinuteStr, 10);
+
+    // Calculate actual start and end times for the day in UTC
+    let dayStartUTC = addMinutes(addHours(startOfDayUTC, openHour), openMinute);
+    let dayEndUTC = addMinutes(addHours(startOfDayUTC, closeHour), closeMinute);
+
+    // Handle cases where close time might be on the next day
+    if (dayEndUTC < dayStartUTC) {
+        dayEndUTC = addHours(dayEndUTC, 24);
+    }
 
     // Get all bookings for this space on this date
     const bookings = await prisma.booking.findMany({
         where: {
             spaceId,
             status: 'CONFIRMED',
-            startTime: { gte: dayStart },
-            endTime: { lte: dayEnd },
+            startTime: { gte: dayStartUTC },
+            endTime: { lte: dayEndUTC },
         },
         include: {
             user: {
-                select: { id: true, name: true, avatarUrl: true },
+                select: { id: true, name: true, email: true, avatarUrl: true },
             },
         },
         orderBy: { startTime: 'asc' },
     });
 
     // Generate time slots
-    const slots: TimeSlot[] = [];
-    const slotDuration = rules.slotDurationMin * 60 * 1000; // Convert to ms
-    let currentTime = dayStart.getTime();
+    const slots = [];
+    const slotDurationMs = rules.slotDurationMin * 60 * 1000;
+    let currentTime = dayStartUTC.getTime();
 
-    while (currentTime + slotDuration <= dayEnd.getTime()) {
+    while (currentTime + slotDurationMs <= dayEndUTC.getTime()) {
         const slotStart = new Date(currentTime);
-        const slotEnd = new Date(currentTime + slotDuration);
+        const slotEnd = new Date(currentTime + slotDurationMs);
 
-        // Check if this slot overlaps with any booking
-        const overlappingBooking = bookings.find(
+        const overlappingBookings = bookings.filter(
             (b) => b.startTime < slotEnd && b.endTime > slotStart
         );
 
-        if (overlappingBooking) {
+        if (overlappingBookings.length > 0) {
             slots.push({
-                startTime: slotStart,
-                endTime: slotEnd,
-                isAvailable: false,
-                booking: {
-                    id: overlappingBooking.id,
-                    userId: overlappingBooking.userId,
-                    userName: overlappingBooking.user.name,
-                    userAvatar: overlappingBooking.user.avatarUrl || undefined,
-                    participants: overlappingBooking.participants as any,
-                },
+                startTime: slotStart.toISOString(),
+                endTime: slotEnd.toISOString(),
+                isAvailable: overlappingBookings.length < space.capacity,
+                bookings: overlappingBookings.map((b: any) => ({
+                    id: b.id,
+                    userId: b.userId,
+                    userEmail: b.user.email,
+                    userName: b.user.name,
+                    userAvatar: b.user.avatarUrl,
+                    participants: b.participants,
+                    slotIndex: b.slotIndex,
+                    slotId: b.slotId,
+                })),
             });
         } else {
             slots.push({
-                startTime: slotStart,
-                endTime: slotEnd,
+                startTime: slotStart.toISOString(),
+                endTime: slotEnd.toISOString(),
                 isAvailable: true,
             });
         }
 
-        currentTime += slotDuration;
+        currentTime += slotDurationMs;
     }
 
-    return slots;
+    return {
+        space: {
+            id: space.id,
+            name: space.name,
+            capacity: space.capacity,
+            slots: space.slots,
+            rules: space.rules,
+        },
+        slots,
+    };
 }

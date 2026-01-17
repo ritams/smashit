@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { API_URL } from '@/lib/config';
 
 interface SSEMessage {
     type: 'CONNECTED' | 'SLOT_UPDATE' | 'BOOKING_CREATED' | 'BOOKING_CANCELLED';
@@ -32,8 +33,7 @@ export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions
             eventSourceRef.current.close();
         }
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const url = `${apiUrl}/api/events?orgSlug=${orgSlug}`;
+        const url = `${API_URL}/api/events?orgSlug=${orgSlug}`;
 
         const eventSource = new EventSource(url);
         eventSourceRef.current = eventSource;

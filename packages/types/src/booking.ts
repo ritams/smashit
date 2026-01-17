@@ -7,6 +7,7 @@ export interface Booking {
     status: BookingStatus;
     participants: BookingParticipant[];
     notes?: string;
+    slotIndex?: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -42,11 +43,12 @@ export interface TimeSlot {
     startTime: Date;
     endTime: Date;
     isAvailable: boolean;
-    booking?: {
+    bookings?: Array<{
         id: string;
         userId: string;
         userName: string;
         userAvatar?: string;
         participants: BookingParticipant[];
-    };
+        slotIndex?: number;
+    }>;
 }

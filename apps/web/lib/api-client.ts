@@ -1,15 +1,15 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { API_URL } from './config';
 
 interface FetchOptions extends RequestInit {
-    userId?: string;
     userEmail?: string;
+    userName?: string;
 }
 
 export async function apiClient<T>(
     endpoint: string,
     options: FetchOptions = {}
 ): Promise<T> {
-    const { userId, userEmail, ...fetchOptions } = options;
+    const { userEmail, userName, ...fetchOptions } = options;
 
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -17,11 +17,11 @@ export async function apiClient<T>(
     };
 
     // Add auth headers if provided
-    if (userId) {
-        (headers as Record<string, string>)['x-user-id'] = userId;
-    }
     if (userEmail) {
         (headers as Record<string, string>)['x-user-email'] = userEmail;
+    }
+    if (userName) {
+        (headers as Record<string, string>)['x-user-name'] = userName;
     }
 
     const response = await fetch(`${API_URL}${endpoint}`, {
@@ -42,49 +42,41 @@ export async function apiClient<T>(
 export const api = {
     // Organization
     getOrg: (slug: string) => apiClient<any>(`/api/orgs/${slug}`),
-    createOrg: (data: { name: string; slug: string; timezone?: string }) =>
+    createOrg: (data: { name: string; slug: string; adminEmail: string; adminName: string }) =>
         apiClient<any>('/api/orgs', { method: 'POST', body: JSON.stringify(data) }),
     checkSlug: (slug: string) => apiClient<{ available: boolean }>(`/api/orgs/check-slug/${slug}`),
 
     // Spaces
     getSpaces: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/spaces`),
-    getSpace: (orgSlug: string, spaceId: string) =>
-        apiClient<any>(`/api/orgs/${orgSlug}/spaces/${spaceId}`),
     getAvailability: (orgSlug: string, spaceId: string, date: string) =>
         apiClient<any>(`/api/orgs/${orgSlug}/spaces/${spaceId}/availability?date=${date}`),
 
     // Bookings
-    getBookings: (orgSlug: string, params: { spaceId?: string; date?: string; userId?: string }) => {
-        const query = new URLSearchParams(params as Record<string, string>).toString();
-        return apiClient<any[]>(`/api/orgs/${orgSlug}/bookings?${query}`);
-    },
     createBooking: (
         orgSlug: string,
-        data: { spaceId: string; startTime: string; endTime: string; participants?: any[]; notes?: string },
-        auth: { userId: string; userEmail: string }
+        data: { spaceId: string; startTime: string; endTime: string },
+        auth: { userEmail: string; userName: string }
     ) =>
         apiClient<any>(`/api/orgs/${orgSlug}/bookings`, {
             method: 'POST',
             body: JSON.stringify(data),
             ...auth,
         }),
-    cancelBooking: (orgSlug: string, bookingId: string, auth: { userId: string; userEmail: string }) =>
+    cancelBooking: (orgSlug: string, bookingId: string, auth: { userEmail: string }) =>
         apiClient<any>(`/api/orgs/${orgSlug}/bookings/${bookingId}`, {
             method: 'DELETE',
             ...auth,
         }),
-    getMyBookings: (orgSlug: string, auth: { userId: string; userEmail: string }) =>
+    getMyBookings: (orgSlug: string, auth: { userEmail: string }) =>
         apiClient<any[]>(`/api/orgs/${orgSlug}/bookings/my`, auth),
 
     // Admin
-    getStats: (orgSlug: string, auth: { userId: string; userEmail: string }) =>
+    getStats: (orgSlug: string, auth: { userEmail: string }) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/stats`, auth),
-    getUsers: (orgSlug: string, auth: { userId: string; userEmail: string }) =>
-        apiClient<any[]>(`/api/orgs/${orgSlug}/admin/users`, auth),
     createSpace: (
         orgSlug: string,
         data: { name: string; description?: string; capacity?: number },
-        auth: { userId: string; userEmail: string }
+        auth: { userEmail: string }
     ) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces`, {
             method: 'POST',

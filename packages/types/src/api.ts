@@ -28,6 +28,7 @@ export interface SSEMessage {
             startTime: string;
             endTime: string;
             userName: string;
+            slotIndex?: number;
         };
     };
 }

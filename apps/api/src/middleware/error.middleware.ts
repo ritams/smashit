@@ -12,7 +12,7 @@ export function errorHandler(
     res: Response,
     _next: NextFunction
 ) {
-    console.error('Error:', err);
+    console.error('Error:', err.message, err.code, err.stack);
 
     if (err instanceof ZodError) {
         return res.status(400).json({

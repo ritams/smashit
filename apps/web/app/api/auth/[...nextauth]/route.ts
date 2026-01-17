@@ -6,14 +6,16 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID || '',
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+            authorization: {
+                params: {
+                    prompt: 'select_account', // Always show account picker
+                },
+            },
         }),
     ],
     session: {
         strategy: 'jwt',
-    },
-    pages: {
-        signIn: '/login',
-        error: '/login',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     callbacks: {
         async jwt({ token, user, account }) {

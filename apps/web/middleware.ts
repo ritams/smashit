@@ -1,65 +1,48 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-
-// Paths that don't require authentication
-const publicPaths = ['/login', '/signup', '/api/auth'];
+import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-    const { pathname, hostname } = request.nextUrl;
+    const path = request.nextUrl.pathname;
 
-    // Extract subdomain (for production)
-    // In development, we use query params or path-based routing
-    let orgSlug: string | null = null;
+    // Public paths that don't require authentication
+    const publicPaths = ['/', '/create-org', '/api/auth'];
 
-    // Check for subdomain in production
-    const host = request.headers.get('host') || '';
-    const parts = host.split('.');
+    // Check if the path is public
+    const isPublicPath = publicPaths.some(
+        (publicPath) => path === publicPath || path.startsWith(`${publicPath}/`)
+    );
 
-    if (parts.length >= 3 && !['www', 'app'].includes(parts[0])) {
-        orgSlug = parts[0];
-    }
-
-    // For development, extract from pathname like /org/[slug]
-    const orgPathMatch = pathname.match(/^\/org\/([^/]+)/);
-    if (orgPathMatch) {
-        orgSlug = orgPathMatch[1];
-    }
-
-    // Skip middleware for public paths and API routes
-    if (publicPaths.some((p) => pathname.startsWith(p))) {
+    // Org login pages are public
+    if (path.match(/^\/org\/[^/]+\/login$/)) {
         return NextResponse.next();
     }
 
-    // Check auth for protected routes
-    const token = await getToken({ req: request });
+    // Get the token
+    const token = await getToken({
+        req: request,
+        secret: process.env.NEXTAUTH_SECRET,
+    });
 
-    if (!token) {
-        const loginUrl = new URL('/login', request.url);
-        if (orgSlug) {
-            loginUrl.searchParams.set('org', orgSlug);
-        }
-        return NextResponse.redirect(loginUrl);
+    // If it's a public path, allow access
+    if (isPublicPath) {
+        return NextResponse.next();
     }
 
-    // Check admin routes
-    if (pathname.includes('/admin')) {
-        // TODO: Check if user is admin for this org
-        // For now, allow all authenticated users
+    // If no token and trying to access protected routes, redirect to home
+    if (!token) {
+        // If trying to access org pages, redirect to org login
+        if (path.match(/^\/org\/[^/]+\//)) {
+            const orgSlug = path.split('/')[2];
+            return NextResponse.redirect(new URL(`/org/${orgSlug}/login`, request.url));
+        }
+        // Otherwise redirect to home
+        return NextResponse.redirect(new URL('/', request.url));
     }
 
     return NextResponse.next();
 }
 
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public folder
-         */
-        '/((?!_next/static|_next/image|favicon.ico|public).*)',
-    ],
+    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

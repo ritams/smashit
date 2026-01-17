@@ -1,17 +1,38 @@
 'use client';
 
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Users, Clock } from 'lucide-react';
+import { Calendar, Users, Clock, Loader2 } from 'lucide-react';
+import { API_URL } from '@/lib/config';
 
-export default function LoginPage() {
+export default function OrgLoginPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const orgSlug = searchParams.get('org') || 'demo-org';
+    const params = useParams();
+    const orgSlug = params.slug as string;
+    const [orgName, setOrgName] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch org details
+    useEffect(() => {
+        async function fetchOrg() {
+            try {
+                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}`);
+                if (!res.ok) {
+                    setError('Organization not found');
+                    return;
+                }
+                const data = await res.json();
+                setOrgName(data.data?.name || orgSlug);
+            } catch (err) {
+                setError('Failed to load organization');
+            }
+        }
+        fetchOrg();
+    }, [orgSlug]);
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -22,9 +43,28 @@ export default function LoginPage() {
     if (status === 'loading') {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10">
-                <div className="animate-pulse-soft">
-                    <Calendar className="h-12 w-12 text-primary" />
-                </div>
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
+                <Card className="w-full max-w-md border-0 shadow-xl">
+                    <CardContent className="pt-6 text-center space-y-4">
+                        <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+                            <Calendar className="h-8 w-8 text-red-600" />
+                        </div>
+                        <h2 className="text-xl font-semibold">Organization Not Found</h2>
+                        <p className="text-muted-foreground">
+                            The organization &quot;{orgSlug}&quot; doesn&apos;t exist.
+                        </p>
+                        <Button variant="outline" onClick={() => router.push('/')}>
+                            Go to Home
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
@@ -37,16 +77,18 @@ export default function LoginPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
                         <Calendar className="h-8 w-8" />
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight">SmashIt</h1>
-                    <p className="text-muted-foreground">Book your space in seconds</p>
+                    <h1 className="text-3xl font-bold tracking-tight">
+                        {orgName || 'Loading...'}
+                    </h1>
+                    <p className="text-muted-foreground">Sign in to book your space</p>
                 </div>
 
                 {/* Login Card */}
                 <Card className="border-0 shadow-xl shadow-black/5">
                     <CardHeader className="text-center pb-2">
-                        <CardTitle className="text-xl">Welcome back</CardTitle>
+                        <CardTitle className="text-xl">Welcome</CardTitle>
                         <CardDescription>
-                            Sign in to access your organization&apos;s booking system
+                            Sign in with Google to access the booking system
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -76,17 +118,8 @@ export default function LoginPage() {
                             Continue with Google
                         </Button>
 
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-card px-2 text-muted-foreground">Quick access</span>
-                            </div>
-                        </div>
-
                         <p className="text-center text-sm text-muted-foreground">
-                            No account needed. Just sign in with your Google account to get started.
+                            Anyone can sign in. Your first login creates your account.
                         </p>
                     </CardContent>
                 </Card>

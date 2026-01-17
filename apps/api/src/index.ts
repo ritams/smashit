@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { orgRoutes } from './routes/org.routes.js';
+import { userRoutes } from './routes/user.routes.js';
 import { spaceRoutes } from './routes/space.routes.js';
 import { bookingRoutes } from './routes/booking.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
@@ -24,6 +25,7 @@ app.get('/health', (_req, res) => {
 });
 
 // Routes
+app.use('/api/users', userRoutes);
 app.use('/api/orgs', orgRoutes);
 app.use('/api/orgs/:slug/spaces', spaceRoutes);
 app.use('/api/orgs/:slug/bookings', bookingRoutes);
@@ -39,6 +41,7 @@ async function start() {
         // Start booking queue worker
         await startBookingWorker();
         console.log('📦 Booking worker started');
+        console.log('📦 Server restarting...');
 
         app.listen(PORT, () => {
             console.log(`🚀 API server running on http://localhost:${PORT}`);

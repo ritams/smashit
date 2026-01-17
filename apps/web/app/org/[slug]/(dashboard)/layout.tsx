@@ -2,11 +2,21 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useParams } from 'next/navigation';
-import { Calendar, LogOut, Settings, User } from 'lucide-react';
+import { Calendar, LogOut, Shield, User } from 'lucide-react';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { getInitials } from '@/lib/utils';
+import { API_URL } from '@/lib/config';
 
 export default function DashboardLayout({
     children,
@@ -16,6 +26,31 @@ export default function DashboardLayout({
     const { data: session } = useSession();
     const params = useParams();
     const orgSlug = params.slug as string;
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    // Check if user is admin
+    useEffect(() => {
+        async function checkAdmin() {
+            if (!session?.user?.email) return;
+            try {
+                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/stats`, {
+                    headers: {
+                        'x-user-email': session.user.email,
+                        'x-user-name': session.user.name || '',
+                    },
+                });
+                // If we can access admin stats, user is admin
+                setIsAdmin(res.ok);
+            } catch {
+                setIsAdmin(false);
+            }
+        }
+        checkAdmin();
+    }, [session, orgSlug]);
+
+    const handleLogout = async () => {
+        await signOut({ redirect: true, callbackUrl: `/org/${orgSlug}/login` });
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10">
@@ -45,27 +80,55 @@ export default function DashboardLayout({
                         </nav>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <Link href={`/org/${orgSlug}/admin`}>
-                            <Button variant="ghost" size="icon">
-                                <Settings className="h-4 w-4" />
+                    {/* User Menu */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="flex items-center gap-2 px-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={session?.user?.image || ''} />
+                                    <AvatarFallback className="text-xs">
+                                        {getInitials(session?.user?.name || 'U')}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="hidden md:block text-sm font-medium">
+                                    {session?.user?.name}
+                                </span>
                             </Button>
-                        </Link>
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={session?.user?.image || ''} />
-                                <AvatarFallback className="text-xs">
-                                    {getInitials(session?.user?.name || 'U')}
-                                </AvatarFallback>
-                            </Avatar>
-                            <span className="hidden md:block text-sm font-medium">
-                                {session?.user?.name}
-                            </span>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={() => signOut()}>
-                            <LogOut className="h-4 w-4" />
-                        </Button>
-                    </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium">{session?.user?.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {session?.user?.email}
+                                    </p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                                <Link href={`/org/${orgSlug}/profile`} className="cursor-pointer">
+                                    <User className="mr-2 h-4 w-4" />
+                                    Profile
+                                </Link>
+                            </DropdownMenuItem>
+                            {isAdmin && (
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/org/${orgSlug}/admin`} className="cursor-pointer">
+                                        <Shield className="mr-2 h-4 w-4" />
+                                        Admin Dashboard
+                                    </Link>
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={handleLogout}
+                                className="text-destructive cursor-pointer"
+                            >
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Sign Out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </header>
 

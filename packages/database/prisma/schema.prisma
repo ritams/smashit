@@ -7,36 +7,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  timezone  String   @default("Asia/Kolkata")
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users  User[]
-  spaces Space[]
+// Global users - not tied to any org
+model User {
+  id             String       @id @default(uuid())
+  email          String       @unique
+  name           String
+  avatarUrl      String?
+  phoneNumber    String?
+  registrationId String?
+  googleId       String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  bookings    Booking[]
 }
 
-model User {
+// Links users to orgs with roles
+model Membership {
   id        String   @id @default(uuid())
-  email     String
-  name      String
-  avatarUrl String?
-  googleId  String
-  role      Role     @default(MEMBER)
+  userId    String
   orgId     String
+  role      Role     @default(MEMBER)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  @@unique([email, orgId])
-  @@unique([googleId, orgId])
+  @@unique([userId, orgId])
   @@index([orgId])
+  @@index([userId])
+}
+
+model Organization {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  timezone    String       @default("Asia/Kolkata")
+  settings    Json         @default("{}")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  spaces      Space[]
+  memberships Membership[]
 }
 
 model Space {
@@ -46,14 +57,32 @@ model Space {
   capacity    Int      @default(1)
   isActive    Boolean  @default(true)
   orgId       String
+  type        String   @default("GENERIC") // "MEETING_ROOM", "SPORTS", etc.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   org      Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   rules    BookingRules?
   bookings Booking[]
+  slots    Slot[]
 
   @@index([orgId])
+}
+
+model Slot {
+  id        String   @id @default(uuid())
+  spaceId   String
+  name      String   // "Court 1", "Seat A"
+  number    Int      // 1-based index for ordering/logic
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  space    Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([spaceId, number])
+  @@index([spaceId])
 }
 
 model BookingRules {
@@ -66,6 +95,11 @@ model BookingRules {
   maxDurationMin  Int     @default(120)
   allowRecurring  Boolean @default(false)
   bufferMinutes   Int     @default(0)
+  
+  // New granular rules
+  maxBookingsPerUserPerDay Int?
+  maxTotalBookingsPerDay   Int?
+  maxActiveBookingsPerUser Int?
 
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 }
@@ -78,16 +112,20 @@ model Booking {
   endTime      DateTime
   status       BookingStatus @default(CONFIRMED)
   participants Json          @default("[]")
+  slotIndex    Int?
+  slotId       String?
   notes        String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  slot  Slot? @relation(fields: [slotId], references: [id])
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([spaceId, startTime, endTime])
   @@index([userId])
   @@index([spaceId, status])
+  @@index([slotId])
 }
 
 enum Role {

@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import { redis } from './redis.js';
 
 export interface BookingJobData {
@@ -9,6 +9,8 @@ export interface BookingJobData {
     endTime: string;
     participants: Array<{ name: string; email?: string }>;
     notes?: string;
+    slotIndex?: number;
+    slotId?: string;
     orgId: string;
 }
 
@@ -23,4 +25,9 @@ export const bookingQueue = new Queue<BookingJobData>('bookings', {
         removeOnComplete: 100,
         removeOnFail: 100,
     },
+});
+
+// QueueEvents for waiting on job completion
+export const bookingQueueEvents = new QueueEvents('bookings', {
+    connection: redis,
 });
