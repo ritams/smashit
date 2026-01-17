@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { API_URL } from '@/lib/config';
 
 interface SSEMessage {
@@ -24,22 +24,41 @@ interface UseSSEOptions {
     onError?: (error: Event) => void;
 }
 
+/**
+ * Fetch auth token for SSE connection
+ */
+async function getSSEToken(): Promise<string | null> {
+    try {
+        const res = await fetch('/api/auth/token');
+        if (!res.ok) return null;
+        const { token } = await res.json();
+        return token || null;
+    } catch {
+        return null;
+    }
+}
+
 export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions) {
     const eventSourceRef = useRef<EventSource | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
 
-    const connect = useCallback(() => {
+    const connect = useCallback(async () => {
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
         }
 
-        const url = `${API_URL}/api/events?orgSlug=${orgSlug}`;
+        // Get auth token for SSE connection
+        const token = await getSSEToken();
+        const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+        const url = `${API_URL}/api/events?orgSlug=${orgSlug}${tokenParam}`;
 
-        const eventSource = new EventSource(url);
+        const eventSource = new EventSource(url, { withCredentials: true });
         eventSourceRef.current = eventSource;
 
         eventSource.onopen = () => {
             console.log('SSE connected');
+            setIsConnected(true);
             onConnect?.();
         };
 
@@ -54,6 +73,7 @@ export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions
 
         eventSource.onerror = (error) => {
             console.error('SSE error:', error);
+            setIsConnected(false);
             onError?.(error);
 
             // Attempt to reconnect after 5 seconds
@@ -72,6 +92,7 @@ export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions
             eventSourceRef.current.close();
             eventSourceRef.current = null;
         }
+        setIsConnected(false);
     }, []);
 
     useEffect(() => {
@@ -79,5 +100,6 @@ export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions
         return () => disconnect();
     }, [connect, disconnect]);
 
-    return { connect, disconnect };
+    return { connect, disconnect, isConnected };
 }
+

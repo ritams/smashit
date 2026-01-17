@@ -1,16 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@smashit/database';
-import { z } from 'zod';
+import { createOrganizationSchema } from '@smashit/validators';
 import { findOrCreateUser } from '../services/user.service.js';
+import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
+import { authLimiter, createLogger } from '../lib/core.js';
+
+const log = createLogger('OrgRoutes');
 
 export const orgRoutes: Router = Router();
-
-// Schema for org creation
-const createOrgSchema = z.object({
-    name: z.string().min(2).max(100),
-    slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/),
-    timezone: z.string().optional().default('Asia/Kolkata'),
-});
 
 // Get organization by slug (public)
 orgRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) => {
@@ -41,13 +38,33 @@ orgRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) 
     }
 });
 
-// Create new organization (requires logged in user)
-orgRoutes.post('/', async (req: Request, res: Response, next: NextFunction) => {
+// Create new organization (requires authentication)
+orgRoutes.post('/', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userEmail = req.headers['x-user-email'] as string;
-        const userName = req.headers['x-user-name'] as string;
-        const userGoogleId = req.headers['x-user-google-id'] as string;
-        const userAvatar = req.headers['x-user-avatar'] as string;
+        // Verify JWT token
+        const token = extractBearerToken(req.headers.authorization);
+        let userEmail: string | undefined;
+        let userName: string | undefined;
+        let userGoogleId: string | undefined;
+        let userAvatar: string | undefined;
+
+        if (token) {
+            const jwtUser = await verifySessionToken(token);
+            if (jwtUser) {
+                userEmail = jwtUser.email;
+                userName = jwtUser.name;
+                userGoogleId = jwtUser.sub;
+                userAvatar = jwtUser.picture;
+            }
+        }
+
+        // Fallback for dev mode
+        if (!userEmail && process.env.ALLOW_HEADER_AUTH === 'true') {
+            userEmail = req.headers['x-user-email'] as string;
+            userName = req.headers['x-user-name'] as string;
+            userGoogleId = req.headers['x-user-google-id'] as string;
+            userAvatar = req.headers['x-user-avatar'] as string;
+        }
 
         if (!userEmail) {
             return res.status(401).json({
@@ -56,13 +73,13 @@ orgRoutes.post('/', async (req: Request, res: Response, next: NextFunction) => {
             });
         }
 
-        const parseResult = createOrgSchema.safeParse(req.body);
+        const parseResult = createOrganizationSchema.safeParse(req.body);
         if (!parseResult.success) {
             return res.status(400).json({
                 success: false,
                 error: {
                     code: 'VALIDATION_ERROR',
-                    message: parseResult.error.errors.map(e => `${e.path}: ${e.message}`).join(', '),
+                    message: parseResult.error.errors.map((e: { path: (string | number)[]; message: string }) => `${e.path}: ${e.message}`).join(', '),
                 },
             });
         }
@@ -115,7 +132,7 @@ orgRoutes.post('/', async (req: Request, res: Response, next: NextFunction) => {
             },
         });
     } catch (error) {
-        console.error('Error creating org:', error);
+        log.error('Error creating org', { error: (error as Error).message });
         next(error);
     }
 });

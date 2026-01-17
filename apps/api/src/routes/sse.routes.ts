@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '@smashit/database';
 import { addSSEConnection, removeSSEConnection } from '../services/sse.service.js';
 import { sseLimiter, createLogger } from '../lib/core.js';
+import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
 
 const log = createLogger('SSERoutes');
 
@@ -10,23 +12,53 @@ export const sseRoutes: Router = Router();
 // Apply rate limiting to SSE connections
 sseRoutes.use(sseLimiter);
 
+// Query param validation
+const sseQuerySchema = z.object({
+    orgSlug: z.string().min(1),
+    token: z.string().optional(), // Token can be passed as query param for EventSource
+});
+
 // SSE endpoint for real-time updates
 sseRoutes.get('/', async (req: Request, res: Response) => {
-    const { orgSlug } = req.query;
-    const userEmail = req.headers['x-user-email'] as string;
+    // Validate query params
+    const queryResult = sseQuerySchema.safeParse(req.query);
+    if (!queryResult.success) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_PARAMS', message: 'orgSlug query parameter is required' },
+        });
+    }
+    const { orgSlug, token: queryToken } = queryResult.data;
 
-    // Require authentication for SSE
-    if (!userEmail) {
+    // Try to get token from Authorization header first, then from query param
+    // (EventSource doesn't support custom headers, so query param is needed)
+    const headerToken = extractBearerToken(req.headers.authorization);
+    const token = headerToken || queryToken;
+
+    let isAuthenticated = false;
+    let userEmail: string | undefined;
+
+    if (token) {
+        const jwtUser = await verifySessionToken(token);
+        if (jwtUser) {
+            isAuthenticated = true;
+            userEmail = jwtUser.email;
+        }
+    }
+
+    // Fallback for dev mode
+    if (!isAuthenticated && process.env.ALLOW_HEADER_AUTH === 'true') {
+        userEmail = req.headers['x-user-email'] as string;
+        if (userEmail) {
+            isAuthenticated = true;
+            log.warn('SSE using header auth fallback', { email: userEmail });
+        }
+    }
+
+    if (!isAuthenticated) {
         return res.status(401).json({
             success: false,
             error: { code: 'UNAUTHORIZED', message: 'Authentication required for real-time updates' },
-        });
-    }
-
-    if (!orgSlug || typeof orgSlug !== 'string') {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'MISSING_ORG', message: 'orgSlug query parameter is required' },
         });
     }
 
@@ -54,16 +86,18 @@ sseRoutes.get('/', async (req: Request, res: Response) => {
 
     // Add to connections
     addSSEConnection(org.id, res);
+    log.debug('SSE client connected', { orgSlug, userEmail });
 
     // Keep connection alive with periodic heartbeats
     const heartbeat = setInterval(() => {
         res.write(': heartbeat\n\n');
     }, 30000);
 
-    // Handle client disconnect - single handler for cleanup
+    // Handle client disconnect
     req.on('close', () => {
         removeSSEConnection(org.id, res);
         clearInterval(heartbeat);
     });
 });
+
 

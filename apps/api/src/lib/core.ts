@@ -118,14 +118,14 @@ export const sseLimiter = rateLimit({
  * Environment variable validation
  */
 export function validateEnv(): void {
-    const required = ['DATABASE_URL'];
+    const required = ['DATABASE_URL', 'NEXTAUTH_SECRET'];
     const missing = required.filter((key) => !process.env[key]);
 
     if (missing.length > 0) {
         throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
     }
 
-    const optional = ['REDIS_URL', 'CORS_ORIGIN', 'PORT', 'LOG_LEVEL'];
+    const optional = ['REDIS_URL', 'CORS_ORIGIN', 'PORT', 'LOG_LEVEL', 'ALLOW_HEADER_AUTH'];
     optional.forEach((key) => {
         if (!process.env[key]) {
             logger.warn(`Optional env var ${key} not set, using defaults`);

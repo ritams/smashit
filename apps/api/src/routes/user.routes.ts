@@ -1,40 +1,76 @@
-import { Router, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@smashit/database';
 import { updateUserProfileSchema } from '@smashit/validators';
 import { createError } from '../middleware/error.middleware.js';
+import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
+import { findOrCreateUser } from '../services/user.service.js';
+import { authLimiter, createLogger } from '../lib/core.js';
+
+const log = createLogger('UserRoutes');
 
 export const userRoutes: Router = Router();
 
-/**
- * Shared auth extraction - validates user from headers
- * This is needed because user routes don't have org context
- */
-interface UserRequest extends Request {
+interface AuthenticatedRequest extends Request {
+    userId?: string;
     userEmail?: string;
-    userName?: string;
 }
 
-async function requireAuth(req: any, res: Response, next: NextFunction) {
-    const userEmail = req.headers['x-user-email'] as string;
-    if (!userEmail) {
+/**
+ * JWT-based auth middleware for user routes (no org context)
+ */
+async function jwtAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    const token = extractBearerToken(req.headers.authorization);
+
+    if (!token) {
+        // Fallback for dev mode
+        if (process.env.ALLOW_HEADER_AUTH === 'true') {
+            const email = req.headers['x-user-email'] as string;
+            if (email) {
+                const user = await prisma.user.findUnique({ where: { email } });
+                if (user) {
+                    req.userId = user.id;
+                    req.userEmail = user.email;
+                    log.warn('Using header auth fallback', { email });
+                    return next();
+                }
+            }
+        }
         return res.status(401).json({
             success: false,
-            error: { code: 'UNAUTHORIZED', message: 'Not logged in' },
+            error: { code: 'UNAUTHORIZED', message: 'Valid token required' },
         });
     }
-    req.userEmail = userEmail;
-    req.userName = req.headers['x-user-name'] as string;
+
+    const jwtUser = await verifySessionToken(token);
+    if (!jwtUser) {
+        return res.status(401).json({
+            success: false,
+            error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        });
+    }
+
+    // Ensure user exists in database
+    const user = await findOrCreateUser({
+        email: jwtUser.email,
+        name: jwtUser.name,
+        googleId: jwtUser.sub,
+        avatarUrl: jwtUser.picture,
+    });
+
+    req.userId = user.id;
+    req.userEmail = user.email;
     next();
 }
 
-// Apply auth middleware to all routes
-userRoutes.use(requireAuth);
+// Apply auth middleware and rate limiting
+userRoutes.use(authLimiter);
+userRoutes.use(jwtAuth);
 
-// Get current user's organizations (memberships)
-userRoutes.get('/me/orgs', async (req: any, res: Response, next: NextFunction) => {
+// Get current user's organizations
+userRoutes.get('/me/orgs', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const user = await prisma.user.findUnique({
-            where: { email: req.userEmail },
+            where: { id: req.userId },
             include: {
                 memberships: {
                     include: {
@@ -63,10 +99,10 @@ userRoutes.get('/me/orgs', async (req: any, res: Response, next: NextFunction) =
 });
 
 // Get current user's profile
-userRoutes.get('/me', async (req: any, res: Response, next: NextFunction) => {
+userRoutes.get('/me', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const user = await prisma.user.findUnique({
-            where: { email: req.userEmail },
+            where: { id: req.userId },
             select: {
                 id: true,
                 email: true,
@@ -108,12 +144,12 @@ userRoutes.get('/me', async (req: any, res: Response, next: NextFunction) => {
 });
 
 // Update current user's profile
-userRoutes.patch('/me', async (req: any, res: Response, next: NextFunction) => {
+userRoutes.patch('/me', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { name, phoneNumber, registrationId } = updateUserProfileSchema.parse(req.body);
 
         const updatedUser = await prisma.user.update({
-            where: { email: req.userEmail },
+            where: { id: req.userId },
             data: {
                 ...(name && { name }),
                 ...(phoneNumber !== undefined && { phoneNumber }),
@@ -134,4 +170,5 @@ userRoutes.patch('/me', async (req: any, res: Response, next: NextFunction) => {
         next(error);
     }
 });
+
 
