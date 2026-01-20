@@ -1,4 +1,5 @@
-import { jwtVerify, JWTPayload } from 'jose';
+import { jwtDecrypt } from 'jose';
+import { hkdf } from '@panva/hkdf';
 import { createLogger } from './core.js';
 
 const log = createLogger('JWT');
@@ -11,8 +12,22 @@ export interface JWTUser {
 }
 
 /**
+ * Derive encryption key the same way NextAuth v4 does
+ * NextAuth uses HKDF to derive a 32-byte key from NEXTAUTH_SECRET for A256GCM
+ */
+async function getDerivedEncryptionKey(secret: string): Promise<Uint8Array> {
+    return await hkdf(
+        'sha256',
+        secret,
+        '',
+        'NextAuth.js Generated Encryption Key',
+        32 // A256GCM requires 32 bytes (256 bits)
+    );
+}
+
+/**
  * Verify next-auth JWT token and extract user info
- * next-auth uses the same NEXTAUTH_SECRET for signing tokens
+ * NextAuth v4 encrypts tokens using JWE with A256CBC-HS512
  */
 export async function verifySessionToken(token: string): Promise<JWTUser | null> {
     const secret = process.env.NEXTAUTH_SECRET;
@@ -23,8 +38,10 @@ export async function verifySessionToken(token: string): Promise<JWTUser | null>
     }
 
     try {
-        const secretKey = new TextEncoder().encode(secret);
-        const { payload } = await jwtVerify(token, secretKey);
+        const encryptionKey = await getDerivedEncryptionKey(secret);
+        const { payload } = await jwtDecrypt(token, encryptionKey, {
+            clockTolerance: 15, // 15 seconds tolerance
+        });
 
         // next-auth stores user info in the token
         if (!payload.email || typeof payload.email !== 'string') {
@@ -39,7 +56,7 @@ export async function verifySessionToken(token: string): Promise<JWTUser | null>
             sub: (payload.sub || payload.googleId) as string,
         };
     } catch (err) {
-        log.debug('Token verification failed', { error: (err as Error).message });
+        log.warn('Token verification failed', { error: (err as Error).message, stack: (err as Error).stack?.split('\n')[1] });
         return null;
     }
 }

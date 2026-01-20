@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { getInitials } from '@/lib/utils';
 
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 interface OrgMembership {
     id: string;
@@ -53,15 +53,8 @@ export default function DashboardPage() {
             if (!session?.user?.email) return;
 
             try {
-                const res = await fetch(`${API_URL}/api/users/me/orgs`, {
-                    headers: {
-                        'x-user-email': session.user.email,
-                    },
-                });
-                const data = await res.json();
-                if (data.success) {
-                    setOrgs(data.data || []);
-                }
+                const data = await api.getMyOrgs();
+                setOrgs(data || []);
             } catch (err) {
                 console.error('Failed to fetch orgs:', err);
             }
