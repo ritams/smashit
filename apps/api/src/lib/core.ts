@@ -102,10 +102,10 @@ export const bookingLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// SSE connections: 10 per minute
+// SSE connections: 30 per minute (high for robustness during flapping)
 export const sseLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 10,
+    max: 30,
     message: {
         success: false,
         error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many connections' },

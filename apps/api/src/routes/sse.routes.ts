@@ -91,7 +91,7 @@ sseRoutes.get('/', async (req: Request, res: Response) => {
     // Keep connection alive with periodic heartbeats
     const heartbeat = setInterval(() => {
         res.write(': heartbeat\n\n');
-    }, 30000);
+    }, 15000);
 
     // Handle client disconnect
     req.on('close', () => {
