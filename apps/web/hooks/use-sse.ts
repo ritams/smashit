@@ -22,6 +22,7 @@ interface UseSSEOptions {
     onMessage?: (message: SSEMessage) => void;
     onConnect?: () => void;
     onError?: (error: Event) => void;
+    enabled?: boolean;
 }
 
 /**
@@ -38,20 +39,28 @@ async function getSSEToken(): Promise<string | null> {
     }
 }
 
-export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions) {
+export function useSSE({ orgSlug, onMessage, onConnect, onError, enabled = true }: UseSSEOptions) {
     const eventSourceRef = useRef<EventSource | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
 
     const connect = useCallback(async () => {
+        if (!enabled) return;
+
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
         }
 
         // Get auth token for SSE connection
         const token = await getSSEToken();
-        const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-        const url = `${API_URL}/api/events?orgSlug=${orgSlug}${tokenParam}`;
+
+        if (!token) {
+            console.log('SSE: No auth token available, skipping connection');
+            setIsConnected(false);
+            return;
+        }
+
+        const url = `${API_URL}/api/events?orgSlug=${orgSlug}&token=${encodeURIComponent(token)}`;
 
         const eventSource = new EventSource(url, { withCredentials: true });
         eventSourceRef.current = eventSource;
@@ -72,21 +81,29 @@ export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions
         };
 
         eventSource.onerror = (error) => {
-            console.error('SSE error:', error);
+            // EventSource doesn't give us the status code, but we know it failed
+            console.error('SSE connection error:', error);
             setIsConnected(false);
             onError?.(error);
 
-            // Attempt to reconnect after 5 seconds
+            // Attempt to reconnect after 5 seconds if still enabled
             eventSource.close();
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+            }
+
             reconnectTimeoutRef.current = setTimeout(() => {
-                connect();
+                if (enabled) {
+                    connect();
+                }
             }, 5000);
         };
-    }, [orgSlug, onMessage, onConnect, onError]);
+    }, [orgSlug, onMessage, onConnect, onError, enabled]);
 
     const disconnect = useCallback(() => {
         if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
         }
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
@@ -96,9 +113,13 @@ export function useSSE({ orgSlug, onMessage, onConnect, onError }: UseSSEOptions
     }, []);
 
     useEffect(() => {
-        connect();
+        if (enabled) {
+            connect();
+        } else {
+            disconnect();
+        }
         return () => disconnect();
-    }, [connect, disconnect]);
+    }, [connect, disconnect, enabled]);
 
     return { connect, disconnect, isConnected };
 }

@@ -16,7 +16,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getInitials } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 export default function DashboardLayout({
     children,
@@ -33,14 +33,9 @@ export default function DashboardLayout({
         async function checkAdmin() {
             if (!session?.user?.email) return;
             try {
-                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/stats`, {
-                    headers: {
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                });
                 // If we can access admin stats, user is admin
-                setIsAdmin(res.ok);
+                await api.getStats(orgSlug);
+                setIsAdmin(true);
             } catch {
                 setIsAdmin(false);
             }

@@ -42,7 +42,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 interface BookingRules {
     id: string;
@@ -116,23 +116,12 @@ export default function AdminDashboard() {
             setLoading(true);
             try {
                 // Fetch spaces
-                const spacesRes = await fetch(`${API_URL}/api/orgs/${orgSlug}/spaces`);
-                const spacesData = await spacesRes.json();
-                if (spacesData.success) {
-                    setSpaces(spacesData.data || []);
-                }
+                const spacesData = await api.getSpaces(orgSlug);
+                setSpaces(spacesData || []);
 
                 // Fetch stats
-                const statsRes = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/stats`, {
-                    headers: {
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                });
-                const statsData = await statsRes.json();
-                if (statsData.success) {
-                    setStats(statsData.data);
-                }
+                const statsData = await api.getStats(orgSlug);
+                setStats(statsData);
             } catch (err) {
                 console.error('Failed to fetch data:', err);
                 toast.error('Failed to load dashboard data');
@@ -147,35 +136,22 @@ export default function AdminDashboard() {
 
         setIsCreating(true);
         try {
-            const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/spaces`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-email': session.user.email,
-                    'x-user-name': session.user.name || '',
-                },
-                body: JSON.stringify({
-                    name: newSpaceName,
-                    description: newSpaceDescription || null,
-                    capacity: parseInt(newSpaceCapacity) || 4,
-                    type: newSpaceType,
-                }),
+            const data = await api.createSpace(orgSlug, {
+                name: newSpaceName,
+                description: newSpaceDescription || undefined,
+                capacity: parseInt(newSpaceCapacity) || 4,
+                type: newSpaceType,
             });
 
-            const data = await res.json();
-            if (data.success && data.data) {
-                setSpaces((prev) => [...prev, data.data]);
-                setShowCreateDialog(false);
-                setNewSpaceName('');
-                setNewSpaceDescription('');
-                setNewSpaceCapacity('4');
-                setNewSpaceType('GENERIC');
-                toast.success('Space created!', { description: data.data.name });
-            } else {
-                toast.error('Failed to create space', { description: data.error?.message });
-            }
-        } catch (err) {
-            toast.error('Failed to create space');
+            setSpaces((prev) => [...prev, data]);
+            setShowCreateDialog(false);
+            setNewSpaceName('');
+            setNewSpaceDescription('');
+            setNewSpaceCapacity('4');
+            setNewSpaceType('GENERIC');
+            toast.success('Space created!', { description: data.name });
+        } catch (err: any) {
+            toast.error('Failed to create space', { description: err.message });
         }
         setIsCreating(false);
     };
@@ -185,26 +161,12 @@ export default function AdminDashboard() {
 
         setIsUpdating(true);
         try {
-            const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/spaces/${editingSpace.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-email': session.user.email,
-                    'x-user-name': session.user.name || '',
-                },
-                body: JSON.stringify(updatedData),
-            });
-
-            const data = await res.json();
-            if (data.success && data.data) {
-                setSpaces(prev => prev.map(s => s.id === editingSpace.id ? data.data : s));
-                setEditingSpace(data.data); // Update local editing state
-                toast.success('Space updated');
-            } else {
-                toast.error('Update failed', { description: data.error?.message });
-            }
-        } catch (error) {
-            toast.error('Update failed');
+            const data = await api.updateSpace(orgSlug, editingSpace.id, updatedData);
+            setSpaces(prev => prev.map(s => s.id === editingSpace.id ? data : s));
+            setEditingSpace(data); // Update local editing state
+            toast.success('Space updated');
+        } catch (error: any) {
+            toast.error('Update failed', { description: error.message });
         }
         setIsUpdating(false);
     };
@@ -217,47 +179,19 @@ export default function AdminDashboard() {
             if (applyToAll) {
                 // Bulk update
                 const spaceIds = spaces.map(s => s.id);
-                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/spaces/rules/bulk`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                    body: JSON.stringify({ spaceIds, rules }),
-                });
-                const data = await res.json();
-                if (data.success) {
-                    toast.success('Rules applied to all spaces');
-                    setEditingSpace(null);
-                    // Reload to fetch fresh data
-                    window.location.reload();
-                } else {
-                    toast.error('Bulk update failed', { description: data.error?.message });
-                }
+                await api.bulkUpdateSpaceRules(orgSlug, { spaceIds, rules });
+                toast.success('Rules applied to all spaces');
+                setEditingSpace(null);
+                // Reload to fetch fresh data
+                window.location.reload();
             } else {
-                // Single update
-                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/spaces/${editingSpace.id}/rules`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                    body: JSON.stringify(rules),
-                });
-
-                const data = await res.json();
-                if (data.success && data.data) {
-                    setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, rules: data.data } : s));
-                    setEditingSpace(prev => prev ? { ...prev, rules: data.data } : null);
-                    toast.success('Rules updated');
-                } else {
-                    toast.error('Update failed', { description: data.error?.message });
-                }
+                const data = await api.updateSpaceRules(orgSlug, editingSpace.id, rules);
+                setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, rules: data } : s));
+                setEditingSpace(prev => prev ? { ...prev, rules: data } : null);
+                toast.success('Rules updated');
             }
-        } catch (error) {
-            toast.error('Update failed');
+        } catch (error: any) {
+            toast.error('Update failed', { description: error.message });
         }
         setIsUpdating(false);
     };
@@ -267,23 +201,11 @@ export default function AdminDashboard() {
 
         setIsDeleting(true);
         try {
-            const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/spaces/${deleteSpaceId}`, {
-                method: 'DELETE',
-                headers: {
-                    'x-user-email': session.user.email,
-                    'x-user-name': session.user.name || '',
-                },
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                setSpaces((prev) => prev.filter((s) => s.id !== deleteSpaceId));
-                toast.success('Space deleted');
-            } else {
-                toast.error('Failed to delete space', { description: data.error?.message });
-            }
-        } catch (err) {
-            toast.error('Failed to delete space');
+            await api.deleteSpace(orgSlug, deleteSpaceId);
+            setSpaces((prev) => prev.filter((s) => s.id !== deleteSpaceId));
+            toast.success('Space deleted');
+        } catch (err: any) {
+            toast.error('Failed to delete space', { description: err.message });
             console.error('Failed to delete space:', err);
         }
         setIsDeleting(false);

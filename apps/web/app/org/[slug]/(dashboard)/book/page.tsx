@@ -39,7 +39,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, getInitials } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 import { AllSpacesView } from '@/components/booking/AllSpacesView';
 import { useSSE } from '@/hooks/use-sse';
 import { LayoutGrid, List } from 'lucide-react';
@@ -173,13 +173,10 @@ export default function BookPage() {
     useEffect(() => {
         async function fetchSpaces() {
             try {
-                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/spaces`);
-                const data = await res.json();
-                if (data.success && data.data) {
-                    setSpaces(data.data);
-                    if (data.data.length > 0) {
-                        setSelectedSpace(data.data[0]);
-                    }
+                const data = await api.getSpaces(orgSlug);
+                setSpaces(data);
+                if (data.length > 0) {
+                    setSelectedSpace(data[0]);
                 }
             } catch (err) {
                 console.error('Failed to fetch spaces:', err);
@@ -197,19 +194,11 @@ export default function BookPage() {
         try {
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const res = await fetch(
-                `${API_URL}/api/orgs/${orgSlug}/spaces/${selectedSpace.id}/availability?date=${dateStr}&timezone=${timezone}`,
-                {
-                    headers: {
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                }
-            );
-            const data = await res.json();
-            if (data.success && data.data?.slots) {
+            const data = await api.getAvailability(orgSlug, selectedSpace.id, dateStr, timezone);
+
+            if (data?.slots) {
                 // Process slots into TimeSlot format
-                const slots: TimeSlot[] = data.data.slots.map((slot: any) => ({
+                const slots: TimeSlot[] = data.slots.map((slot: any) => ({
                     hour: new Date(slot.startTime).getHours(),
                     startTime: new Date(slot.startTime),
                     endTime: new Date(slot.endTime),
@@ -222,7 +211,7 @@ export default function BookPage() {
             toast.error('Failed to load time slots');
         }
         setLoadingSlots(false);
-    }, [selectedSpace, selectedDate, orgSlug, session?.user?.email, session?.user?.name]);
+    }, [selectedSpace, selectedDate, orgSlug, session?.user?.email]);
 
     useEffect(() => {
         if (viewMode === 'single') {
@@ -231,16 +220,19 @@ export default function BookPage() {
     }, [fetchSlots, viewMode]);
 
     // SSE for real-time updates - refetch when other users create/cancel bookings
+    const handleSSEMessage = useCallback((msg: any) => {
+        if (msg.type === 'BOOKING_CREATED' || msg.type === 'BOOKING_CANCELLED') {
+            // Refresh all spaces view
+            setAllSpacesRefreshKey(prev => prev + 1);
+            // Refresh single space view
+            fetchSlots();
+        }
+    }, [fetchSlots]);
+
     useSSE({
         orgSlug,
-        onMessage: (msg) => {
-            if (msg.type === 'BOOKING_CREATED' || msg.type === 'BOOKING_CANCELLED') {
-                // Refresh all spaces view
-                setAllSpacesRefreshKey(prev => prev + 1);
-                // Refresh single space view
-                fetchSlots();
-            }
-        },
+        onMessage: handleSSEMessage,
+        enabled: !!session,
     });
 
     // Handle booking
@@ -249,35 +241,22 @@ export default function BookPage() {
 
         setIsBooking(true);
         try {
-            const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/bookings`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-email': session.user.email,
-                    'x-user-name': session.user.name || '',
-                },
-                body: JSON.stringify({
-                    spaceId: selectedSpace.id,
-                    startTime: bookingInfo.slot.startTime.toISOString(),
-                    endTime: bookingInfo.slot.endTime.toISOString(),
-                    slotIndex: bookingInfo.index,
-                    slotId: bookingInfo.slotId,
-                }),
+            await api.createBooking(orgSlug, {
+                spaceId: selectedSpace.id,
+                startTime: bookingInfo.slot.startTime.toISOString(),
+                endTime: bookingInfo.slot.endTime.toISOString(),
+                slotIndex: bookingInfo.index,
+                slotId: bookingInfo.slotId,
             });
 
-            const data = await res.json();
-            if (data.success) {
-                toast.success('Booking confirmed!', {
-                    description: `${selectedSpace.name} at ${format(bookingInfo.slot.startTime, 'h:mm a')}`,
-                });
-                setBookingInfo(null);
-                fetchSlots();
-                setAllSpacesRefreshKey(prev => prev + 1);
-            } else {
-                toast.error('Booking failed', { description: data.error?.message });
-            }
-        } catch (err) {
-            toast.error('Booking failed');
+            toast.success('Booking confirmed!', {
+                description: `${selectedSpace.name} at ${format(bookingInfo.slot.startTime, 'h:mm a')}`,
+            });
+            setBookingInfo(null);
+            fetchSlots();
+            setAllSpacesRefreshKey(prev => prev + 1);
+        } catch (err: any) {
+            toast.error('Booking failed', { description: err.message });
         }
         setIsBooking(false);
     };
@@ -288,28 +267,13 @@ export default function BookPage() {
 
         setIsCanceling(true);
         try {
-            const res = await fetch(
-                `${API_URL}/api/orgs/${orgSlug}/bookings/${cancelInfo.booking.id}`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                }
-            );
-
-            const data = await res.json();
-            if (data.success) {
-                toast.success('Booking cancelled');
-                setCancelInfo(null);
-                fetchSlots();
-                setAllSpacesRefreshKey(prev => prev + 1);
-            } else {
-                toast.error('Cancellation failed', { description: data.error?.message });
-            }
-        } catch (err) {
-            toast.error('Cancellation failed');
+            await api.cancelBooking(orgSlug, cancelInfo.booking.id);
+            toast.success('Booking cancelled');
+            setCancelInfo(null);
+            fetchSlots();
+            setAllSpacesRefreshKey(prev => prev + 1);
+        } catch (err: any) {
+            toast.error('Cancellation failed', { description: err.message });
         }
         setIsCanceling(false);
     };

@@ -77,10 +77,10 @@ export const api = {
 
     // Spaces (public)
     getSpaces: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/spaces`),
-    getAvailability: (orgSlug: string, spaceId: string, date: string) =>
-        apiClient<any>(`/api/orgs/${orgSlug}/spaces/${spaceId}/availability?date=${date}`),
-    getAllAvailability: (orgSlug: string, date: string) =>
-        apiClient<any>(`/api/orgs/${orgSlug}/spaces/all/availability?date=${date}`),
+    getAvailability: (orgSlug: string, spaceId: string, date: string, timezone?: string) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/spaces/${spaceId}/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`),
+    getAllAvailability: (orgSlug: string, date: string, timezone?: string) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/spaces/all/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`),
 
     // Bookings (all authenticated)
     createBooking: (orgSlug: string, data: { spaceId: string; startTime: string; endTime: string; slotId?: string; slotIndex?: number }) =>
@@ -112,6 +112,8 @@ export const api = {
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/${spaceId}`, { method: 'PATCH', body: JSON.stringify(data), auth: true }),
     updateSpaceRules: (orgSlug: string, spaceId: string, data: any) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/${spaceId}/rules`, { method: 'PATCH', body: JSON.stringify(data), auth: true }),
+    bulkUpdateSpaceRules: (orgSlug: string, data: { spaceIds: string[]; rules: any }) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/rules/bulk`, { method: 'POST', body: JSON.stringify(data), auth: true }),
     deleteSpace: (orgSlug: string, spaceId: string) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/${spaceId}`, { method: 'DELETE', auth: true }),
 };

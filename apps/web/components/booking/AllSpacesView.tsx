@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { AlertCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, getInitials } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -65,14 +65,8 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger 
             const formattedDate = format(date, 'yyyy-MM-dd');
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-            const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/spaces/all/availability?date=${formattedDate}&timezone=${timezone}`);
-            const json = await res.json();
-
-            if (json.success) {
-                setData(json.data);
-            } else {
-                toast.error('Failed to load availability');
-            }
+            const data = await api.getAllAvailability(orgSlug, formattedDate, timezone);
+            setData(data);
         } catch (err) {
             console.error(err);
             toast.error('Failed to load availability');

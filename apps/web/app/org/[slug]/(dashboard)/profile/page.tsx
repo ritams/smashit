@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, getInitials } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 export default function ProfilePage() {
     const { data: session } = useSession();
@@ -31,21 +31,13 @@ export default function ProfilePage() {
     // Fetch profile data
     const fetchProfile = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/users/me`, {
-                headers: {
-                    'x-user-email': session?.user?.email || '',
-                    'x-user-name': session?.user?.name || '',
-                },
+            const profileData = await api.getMe();
+            setProfile(profileData);
+            setFormData({
+                name: profileData.name || '',
+                phoneNumber: profileData.phoneNumber || '',
+                registrationId: profileData.registrationId || '',
             });
-            const result = await res.json();
-            if (result.success) {
-                setProfile(result.data);
-                setFormData({
-                    name: result.data.name || '',
-                    phoneNumber: result.data.phoneNumber || '',
-                    registrationId: result.data.registrationId || '',
-                });
-            }
         } catch (error) {
             console.error('Failed to fetch profile:', error);
             toast.error('Could not load profile');
@@ -63,23 +55,10 @@ export default function ProfilePage() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const res = await fetch(`${API_URL}/api/users/me`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-email': session?.user?.email || '',
-                    'x-user-name': session?.user?.name || '',
-                },
-                body: JSON.stringify(formData),
-            });
-            const result = await res.json();
-            if (result.success) {
-                setProfile({ ...profile, ...result.data });
-                setIsEditing(false);
-                toast.success('Profile updated successfully');
-            } else {
-                toast.error(result.error?.message || 'Failed to update profile');
-            }
+            const updatedData = await api.updateMe(formData);
+            setProfile({ ...profile, ...updatedData });
+            setIsEditing(false);
+            toast.success('Profile updated successfully');
         } catch (error) {
             toast.error('An error occurred while saving');
         } finally {

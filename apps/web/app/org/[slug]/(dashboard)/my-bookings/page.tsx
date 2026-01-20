@@ -18,8 +18,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { cn, formatTime } from '@/lib/utils';
-
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 interface Booking {
     id: string;
@@ -50,16 +49,8 @@ export default function MyBookingsPage() {
 
             setLoading(true);
             try {
-                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/bookings/my`, {
-                    headers: {
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                });
-                const data = await res.json();
-                if (data.success && data.data) {
-                    setBookings(data.data);
-                }
+                const data = await api.getMyBookings(orgSlug);
+                setBookings(data);
             } catch (err) {
                 console.error('Failed to fetch bookings:', err);
             }
@@ -73,18 +64,8 @@ export default function MyBookingsPage() {
 
         setIsCanceling(true);
         try {
-            const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/bookings/${cancelingId}`, {
-                method: 'DELETE',
-                headers: {
-                    'x-user-email': session.user.email,
-                    'x-user-name': session.user.name || '',
-                },
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                setBookings((prev) => prev.filter((b) => b.id !== cancelingId));
-            }
+            await api.cancelBooking(orgSlug, cancelingId);
+            setBookings((prev) => prev.filter((b) => b.id !== cancelingId));
         } catch (err) {
             console.error('Failed to cancel booking:', err);
         }
