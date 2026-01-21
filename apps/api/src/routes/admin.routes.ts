@@ -5,6 +5,24 @@ import { broadcastBookingUpdate } from '../services/sse.service.js';
 import { orgMiddleware } from '../middleware/org.middleware.js';
 import { authMiddleware, adminMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
 
+// Sport-specific slot naming
+const SLOT_PREFIXES: Record<string, string> = {
+    BADMINTON: 'Court',
+    TENNIS: 'Court',
+    TABLE_TENNIS: 'Table',
+    FOOTBALL: 'Field',
+    BASKETBALL: 'Court',
+    CRICKET: 'Net',
+    SWIMMING: 'Lane',
+    SQUASH: 'Court',
+    GENERIC: 'Slot',
+};
+
+function getSlotName(type: string, number: number): string {
+    const prefix = SLOT_PREFIXES[type] || 'Slot';
+    return `${prefix} ${number}`;
+}
+
 export const adminRoutes: Router = Router({ mergeParams: true });
 
 // Apply middleware - must be authenticated and admin
@@ -109,7 +127,7 @@ adminRoutes.post('/spaces', async (req: AuthRequest, res, next) => {
                 slots: {
                     create: Array.from({ length: data.capacity }, (_, i) => ({
                         number: i + 1,
-                        name: `Slot ${i + 1}`,
+                        name: getSlotName(data.type || 'GENERIC', i + 1),
                     })),
                 },
             },
@@ -157,7 +175,7 @@ adminRoutes.patch('/spaces/:spaceId', async (req: AuthRequest, res, next) => {
                     data: Array.from({ length: newSlotsCount }, (_, i) => ({
                         spaceId,
                         number: startNumber + i,
-                        name: `Slot ${startNumber + i}`,
+                        name: getSlotName(space.type, startNumber + i),
                     })),
                 });
             } else {

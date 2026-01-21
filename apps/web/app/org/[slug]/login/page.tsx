@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Users, Clock, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { API_URL } from '@/lib/config';
 
 export default function OrgLoginPage() {
@@ -42,26 +42,23 @@ export default function OrgLoginPage() {
 
     if (status === 'loading') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-                <Card className="w-full max-w-md border-0 shadow-xl">
-                    <CardContent className="pt-6 text-center space-y-4">
-                        <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
-                            <Calendar className="h-8 w-8 text-red-600" />
-                        </div>
-                        <h2 className="text-xl font-semibold">Organization Not Found</h2>
-                        <p className="text-muted-foreground">
+            <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                <Card className="w-full max-w-sm border border-border">
+                    <CardContent className="pt-8 text-center space-y-4">
+                        <h2 className="text-lg font-medium">Organization not found</h2>
+                        <p className="text-sm text-muted-foreground">
                             The organization &quot;{orgSlug}&quot; doesn&apos;t exist.
                         </p>
                         <Button variant="outline" onClick={() => router.push('/')}>
-                            Go to Home
+                            Go to home
                         </Button>
                     </CardContent>
                 </Card>
@@ -70,34 +67,47 @@ export default function OrgLoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-            <div className="w-full max-w-md space-y-8">
+        <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+            {/* Ambient Background */}
+            <div className="absolute inset-0 w-full h-full">
+                <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
+            </div>
+
+            <div className="w-full max-w-sm space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* Logo and Title */}
-                <div className="text-center space-y-2">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-                        <Calendar className="h-8 w-8" />
+                <div className="text-center space-y-4">
+                    <div className="flex justify-center mb-6">
+                        <span className="text-2xl font-medium tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+                            avith
+                        </span>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight">
-                        {orgName || 'Loading...'}
-                    </h1>
-                    <p className="text-muted-foreground">Sign in to book your space</p>
+                    <div className="space-y-2">
+                        <h1 className="text-3xl font-semibold tracking-tight">
+                            {orgName || 'Loading...'}
+                        </h1>
+                        <p className="text-muted-foreground text-sm">
+                            Sign in to reserve your space
+                        </p>
+                    </div>
                 </div>
 
                 {/* Login Card */}
-                <Card className="border-0 shadow-xl shadow-black/5">
+                <Card className="border-border/50 bg-background/60 backdrop-blur-xl shadow-xl shadow-primary/5">
                     <CardHeader className="text-center pb-2">
-                        <CardTitle className="text-xl">Welcome</CardTitle>
-                        <CardDescription>
-                            Sign in with Google to access the booking system
+                        <CardTitle className="text-lg font-medium">Welcome</CardTitle>
+                        <CardDescription className="text-sm">
+                            Continue with your account
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 pt-6">
                         <Button
                             onClick={() => signIn('google', { callbackUrl: `/org/${orgSlug}/book` })}
-                            className="w-full h-12 text-base gap-3"
+                            variant="outline"
+                            className="w-full h-11 text-sm gap-3 border-border hover:bg-background hover:text-foreground transition-all duration-300 hover:shadow-md hover:border-primary/20"
                             size="lg"
                         >
-                            <svg className="h-5 w-5" viewBox="0 0 24 24">
+                            <svg className="h-4 w-4" viewBox="0 0 24 24">
                                 <path
                                     fill="currentColor"
                                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -118,33 +128,11 @@ export default function OrgLoginPage() {
                             Continue with Google
                         </Button>
 
-                        <p className="text-center text-sm text-muted-foreground">
-                            Anyone can sign in. Your first login creates your account.
+                        <p className="text-center text-[10px] text-muted-foreground/60 uppercase tracking-widest pt-2">
+                            Secure Access
                         </p>
                     </CardContent>
                 </Card>
-
-                {/* Features */}
-                <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                    <div className="space-y-2">
-                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary">
-                            <Calendar className="h-5 w-5" />
-                        </div>
-                        <p className="text-muted-foreground">Easy Booking</p>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary">
-                            <Users className="h-5 w-5" />
-                        </div>
-                        <p className="text-muted-foreground">See Others</p>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary">
-                            <Clock className="h-5 w-5" />
-                        </div>
-                        <p className="text-muted-foreground">Real-time</p>
-                    </div>
-                </div>
             </div>
         </div>
     );

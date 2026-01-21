@@ -10,7 +10,6 @@ import {
     LogOut,
     Building2,
     Settings,
-    Users,
     Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -66,7 +65,7 @@ export default function DashboardPage() {
     if (status === 'loading') {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -76,59 +75,60 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
+        <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="container py-6">
-                <nav className="flex items-center justify-between">
-                    <Link href="/dashboard" className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground">
-                            <Calendar className="h-5 w-5" />
+            <header className="border-b border-border">
+                <div className="container py-4">
+                    <nav className="flex items-center justify-between">
+                        <Link href="/dashboard" className="group">
+                            <span className="text-xl font-medium tracking-tight">
+                                avith
+                            </span>
+                        </Link>
+                        <div className="flex items-center gap-4">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors cursor-pointer outline-none">
+                                        <Avatar className="h-7 w-7">
+                                            <AvatarImage src={session.user?.image || ''} />
+                                            <AvatarFallback className="text-xs font-medium bg-primary text-primary-foreground">
+                                                {getInitials(session.user?.name || 'U')}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-sm font-medium hidden md:block">
+                                            {session.user?.name}
+                                        </span>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuLabel className="font-normal">
+                                        <div className="flex flex-col space-y-1">
+                                            <p className="text-sm font-medium">{session.user?.name}</p>
+                                            <p className="text-xs text-muted-foreground">{session.user?.email}</p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive cursor-pointer"
+                                        onClick={() => signOut({ callbackUrl: '/' })}
+                                    >
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        Sign out
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
-                        <span className="text-xl font-bold">SmashIt</span>
-                    </Link>
-                    <div className="flex items-center gap-4">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-3 px-3 py-1.5 rounded-full hover:bg-muted transition-all duration-300 cursor-pointer outline-none">
-                                    <Avatar className="h-8 w-8 ring-2 ring-background shadow-sm">
-                                        <AvatarImage src={session.user?.image || ''} />
-                                        <AvatarFallback className="text-xs font-medium bg-gradient-to-br from-primary to-cyan-500 text-white">
-                                            {getInitials(session.user?.name || 'U')}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm font-medium hidden md:block">
-                                        {session.user?.name}
-                                    </span>
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 mt-2">
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium">{session.user?.name}</p>
-                                        <p className="text-xs text-muted-foreground">{session.user?.email}</p>
-                                    </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                                    onClick={() => signOut({ callbackUrl: '/' })}
-                                >
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    Sign out
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </nav>
+                    </nav>
+                </div>
             </header>
 
             {/* Main Content */}
-            <main className="container py-8">
-                <div className="max-w-4xl mx-auto space-y-8">
+            <main className="container py-10">
+                <div className="max-w-3xl mx-auto space-y-8">
                     {/* Welcome */}
-                    <div className="space-y-2">
-                        <h1 className="text-3xl font-bold">
-                            Welcome, {session.user?.name?.split(' ')[0]}!
+                    <div className="space-y-1">
+                        <h1 className="text-2xl font-medium">
+                            Welcome, {session.user?.name?.split(' ')[0]}
                         </h1>
                         <p className="text-muted-foreground">
                             Manage your organizations and bookings
@@ -136,17 +136,17 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Organizations */}
-                    <Card>
-                        <CardHeader>
+                    <Card className="border border-border">
+                        <CardHeader className="pb-4">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
-                                    <Building2 className="h-5 w-5" />
-                                    Your Organizations
+                                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                                    <Building2 className="h-4 w-4" />
+                                    Your organizations
                                 </CardTitle>
                                 <Link href="/create-org">
-                                    <Button size="sm">
+                                    <Button size="sm" variant="outline">
                                         <PlusCircle className="h-4 w-4 mr-2" />
-                                        Create Organization
+                                        Create
                                     </Button>
                                 </Link>
                             </div>
@@ -154,29 +154,29 @@ export default function DashboardPage() {
                         <CardContent>
                             {loading ? (
                                 <div className="space-y-3">
-                                    <Skeleton className="h-16" />
-                                    <Skeleton className="h-16" />
+                                    <Skeleton className="h-14" />
+                                    <Skeleton className="h-14" />
                                 </div>
                             ) : orgs.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground">
-                                    <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>You&apos;re not part of any organizations yet.</p>
+                                    <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                    <p className="text-sm">You&apos;re not part of any organizations yet.</p>
                                     <p className="text-sm">Create one or join an existing one.</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     {orgs.map((org) => (
                                         <div
                                             key={org.id}
-                                            className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                                            className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                                         >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                                    <Building2 className="h-5 w-5 text-primary" />
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                    <Building2 className="h-4 w-4 text-primary" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium">{org.name}</p>
-                                                    <p className="text-sm text-muted-foreground">
+                                                    <p className="font-medium text-sm">{org.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
                                                         /org/{org.slug} •{' '}
                                                         <span
                                                             className={
@@ -193,9 +193,8 @@ export default function DashboardPage() {
                                             <div className="flex items-center gap-2">
                                                 {org.role === 'ADMIN' && (
                                                     <Link href={`/org/${org.slug}/admin`}>
-                                                        <Button variant="outline" size="sm">
-                                                            <Settings className="h-4 w-4 mr-2" />
-                                                            Manage
+                                                        <Button variant="ghost" size="sm">
+                                                            <Settings className="h-4 w-4" />
                                                         </Button>
                                                     </Link>
                                                 )}

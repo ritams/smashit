@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
-import { Calendar, Clock, Trash2, Loader2, Archive, ChevronDown, ChevronUp, Hash } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Dialog,
@@ -42,11 +41,9 @@ export default function MyBookingsPage() {
     const [isCanceling, setIsCanceling] = useState(false);
     const [showPastBookings, setShowPastBookings] = useState(false);
 
-    // Fetch my bookings
     useEffect(() => {
         async function fetchBookings() {
             if (!session?.user?.email) return;
-
             setLoading(true);
             try {
                 const data = await api.getMyBookings(orgSlug);
@@ -61,7 +58,6 @@ export default function MyBookingsPage() {
 
     const handleCancel = async () => {
         if (!cancelingId || !session?.user?.email) return;
-
         setIsCanceling(true);
         try {
             await api.cancelBooking(orgSlug, cancelingId);
@@ -74,27 +70,20 @@ export default function MyBookingsPage() {
     };
 
     const now = new Date();
-
-    // Upcoming bookings: start time is in the future (start time >= now)
     const upcomingBookings = bookings.filter(
         (b) => new Date(b.startTime) >= now && b.status !== 'CANCELLED'
     );
-
-    // Past bookings: start time is in the past (start time < now) - archived
     const pastBookings = bookings.filter(
         (b) => new Date(b.startTime) < now && b.status !== 'CANCELLED'
     );
 
     if (loading) {
         return (
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">My Bookings</h1>
-                    <p className="text-muted-foreground">Loading your bookings...</p>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="max-w-3xl mx-auto py-8 space-y-6">
+                <Skeleton className="h-8 w-48" />
+                <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-40" />
+                        <Skeleton key={i} className="h-24" />
                     ))}
                 </div>
             </div>
@@ -102,176 +91,122 @@ export default function MyBookingsPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8 p-4 md:p-6">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">My Bookings</h1>
-                <p className="text-muted-foreground text-lg">
-                    View and manage your upcoming bookings
+        <div className="max-w-3xl mx-auto py-8">
+            {/* Header */}
+            <div className="mb-10">
+                <h1 className="text-2xl font-medium tracking-tight">My Bookings</h1>
+                <p className="text-muted-foreground mt-1">
+                    Manage your upcoming reservations
                 </p>
             </div>
 
+            {/* Upcoming Bookings */}
             {upcomingBookings.length === 0 ? (
-                <Card className="border-dashed bg-muted/30">
-                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-6">
-                            <Calendar className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-xl font-semibold mb-2">No upcoming bookings</h3>
-                        <p className="text-muted-foreground max-w-sm mb-8">
-                            You don&apos;t have any upcoming bookings scheduled. Book a court to get started!
-                        </p>
-                        <Link href={`/org/${orgSlug}/book`}>
-                            <Button size="lg" className="rounded-full px-8">Book a Space</Button>
-                        </Link>
-                    </CardContent>
-                </Card>
+                <div className="text-center py-16 border border-dashed border-border rounded-lg">
+                    <p className="text-lg font-medium mb-2">No upcoming bookings</p>
+                    <p className="text-muted-foreground mb-6">
+                        You don't have any reservations scheduled
+                    </p>
+                    <Link href={`/org/${orgSlug}/book`}>
+                        <Button>Make a Booking</Button>
+                    </Link>
+                </div>
             ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-3">
                     {upcomingBookings.map((booking) => {
                         const startDate = new Date(booking.startTime);
-                        const isToday =
-                            startDate.toDateString() === new Date().toDateString();
-                        const isTomorrow =
-                            startDate.toDateString() ===
-                            new Date(Date.now() + 86400000).toDateString();
+                        const isToday = startDate.toDateString() === new Date().toDateString();
+                        const isTomorrow = startDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
 
                         return (
-                            <Card
+                            <div
                                 key={booking.id}
                                 className={cn(
-                                    'group overflow-hidden transition-all duration-200 border shadow-sm hover:shadow-md rounded-xl',
-                                    isToday ? 'border-primary/50 bg-primary/5' : 'bg-card'
+                                    "group border rounded-lg p-5 transition-all",
+                                    isToday
+                                        ? "bg-primary/5 border-primary/20"
+                                        : "bg-background border-border hover:border-border/80"
                                 )}
                             >
-                                <CardHeader className="pb-3 pt-5 px-5">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <CardTitle className="text-lg font-bold leading-tight">
-                                            {booking.space.name}
-                                        </CardTitle>
-                                        {isToday && (
-                                            <span className="flex-shrink-0 px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wide">
-                                                Today
-                                            </span>
-                                        )}
-                                        {isTomorrow && (
-                                            <span className="flex-shrink-0 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold uppercase tracking-wide">
-                                                Tomorrow
-                                            </span>
-                                        )}
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-4 px-5 pb-5">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-3 text-sm">
-                                            <div className="p-1.5 rounded-md bg-muted/50 text-muted-foreground">
-                                                <Calendar className="h-4 w-4" />
-                                            </div>
-                                            <span className="font-medium text-foreground/80">
-                                                {format(startDate, 'EEEE, MMMM d, yyyy')}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-sm">
-                                            <div className="p-1.5 rounded-md bg-muted/50 text-muted-foreground">
-                                                <Clock className="h-4 w-4" />
-                                            </div>
-                                            <span className="font-medium text-foreground/80">
-                                                {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-                                            </span>
-                                        </div>
-                                        {(booking.slot || booking.slotIndex !== undefined) && (
-                                            <div className="flex items-center gap-3 text-sm">
-                                                <div className="p-1.5 rounded-md bg-primary/10 text-primary">
-                                                    <Hash className="h-4 w-4" />
-                                                </div>
-                                                <span className="font-semibold text-primary">
-                                                    {booking.slot?.name || `Slot ${(booking.slotIndex ?? 0) + 1}`}
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-2 flex-1">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="font-medium">{booking.space.name}</h3>
+                                            {isToday && (
+                                                <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                                                    Today
                                                 </span>
-                                            </div>
-                                        )}
+                                            )}
+                                            {isTomorrow && (
+                                                <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                                    Tomorrow
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                            <span>{format(startDate, 'EEEE, MMM d')}</span>
+                                            <span className="text-border">·</span>
+                                            <span>{formatTime(booking.startTime)} – {formatTime(booking.endTime)}</span>
+                                            {(booking.slot || booking.slotIndex !== undefined) && (
+                                                <>
+                                                    <span className="text-border">·</span>
+                                                    <span className="text-primary font-medium">
+                                                        {booking.slot?.name || `Slot ${(booking.slotIndex ?? 0) + 1}`}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-
-                                    <div className="pt-2">
-                                        <Button
-                                            variant="outline"
-                                            className="w-full border-dashed text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 dark:hover:bg-destructive/10 transition-colors h-10"
-                                            onClick={() => setCancelingId(booking.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Cancel Booking
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => setCancelingId(booking.id)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </div>
                         );
                     })}
                 </div>
             )}
 
-            {/* Past Bookings Section */}
+            {/* Past Bookings */}
             {pastBookings.length > 0 && (
-                <div className="space-y-4">
+                <div className="mt-12 pt-8 border-t border-border">
                     <button
                         onClick={() => setShowPastBookings(!showPastBookings)}
-                        className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors group"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                        <div className="p-2 rounded-lg bg-muted/50 group-hover:bg-muted transition-colors">
-                            <Archive className="h-5 w-5" />
-                        </div>
-                        <span className="text-lg font-semibold">
-                            Past Bookings ({pastBookings.length})
-                        </span>
+                        <span className="text-sm font-medium">Past bookings ({pastBookings.length})</span>
                         {showPastBookings ? (
-                            <ChevronUp className="h-5 w-5" />
+                            <ChevronUp className="h-4 w-4" />
                         ) : (
-                            <ChevronDown className="h-5 w-5" />
+                            <ChevronDown className="h-4 w-4" />
                         )}
                     </button>
 
                     {showPastBookings && (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="mt-4 space-y-2">
                             {pastBookings.map((booking) => {
                                 const startDate = new Date(booking.startTime);
-
                                 return (
-                                    <Card
+                                    <div
                                         key={booking.id}
-                                        className="overflow-hidden border border-muted bg-muted/20 rounded-xl opacity-70"
+                                        className="border border-border/50 rounded-lg p-4 bg-muted/30"
                                     >
-                                        <CardHeader className="pb-2 pt-4 px-4">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <CardTitle className="text-base font-semibold leading-tight text-muted-foreground">
-                                                    {booking.space.name}
-                                                </CardTitle>
-                                                <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium uppercase tracking-wide border border-muted-foreground/20">
-                                                    Completed
-                                                </span>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <span className="font-medium text-muted-foreground">{booking.space.name}</span>
+                                                <span className="text-muted-foreground/60">{format(startDate, 'MMM d, yyyy')}</span>
+                                                <span className="text-muted-foreground/60">{formatTime(booking.startTime)}</span>
                                             </div>
-                                        </CardHeader>
-                                        <CardContent className="px-4 pb-4">
-                                            <div className="space-y-1.5">
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <Calendar className="h-3.5 w-3.5" />
-                                                    <span className="font-medium">
-                                                        {format(startDate, 'EEEE, MMMM d, yyyy')}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <Clock className="h-3.5 w-3.5" />
-                                                    <span className="font-medium">
-                                                        {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-                                                    </span>
-                                                </div>
-                                                {(booking.slot || booking.slotIndex !== undefined) && (
-                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                        <Hash className="h-3.5 w-3.5" />
-                                                        <span className="font-medium">
-                                                            {booking.slot?.name || `Slot ${(booking.slotIndex ?? 0) + 1}`}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                                                Completed
+                                            </span>
+                                        </div>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -279,23 +214,22 @@ export default function MyBookingsPage() {
                 </div>
             )}
 
-            {/* Cancel Confirmation Dialog */}
+            {/* Cancel Dialog */}
             <Dialog open={!!cancelingId} onOpenChange={() => setCancelingId(null)}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Cancel Booking</DialogTitle>
+                        <DialogTitle>Cancel booking?</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to cancel this booking? This action cannot be
-                            undone.
+                            This will release the slot for other members.
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter>
+                    <DialogFooter className="flex gap-2">
                         <Button variant="outline" onClick={() => setCancelingId(null)}>
-                            Keep Booking
+                            Keep
                         </Button>
                         <Button variant="destructive" onClick={handleCancel} disabled={isCanceling}>
                             {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Yes, Cancel
+                            Cancel booking
                         </Button>
                     </DialogFooter>
                 </DialogContent>

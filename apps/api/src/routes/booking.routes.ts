@@ -92,7 +92,8 @@ bookingRoutes.post('/', bookingLimiter, async (req: AuthRequest, res, next) => {
             });
         }
 
-        // Add to queue for processing
+        // Add to queue for processing (admins bypass rules)
+        const isAdmin = req.membership?.role === 'ADMIN';
         const job = await (bookingQueue as any).add('create-booking', {
             spaceId: data.spaceId,
             userId: req.user!.id,
@@ -104,6 +105,7 @@ bookingRoutes.post('/', bookingLimiter, async (req: AuthRequest, res, next) => {
             slotIndex: data.slotIndex,
             slotId: data.slotId, // Pass slotId
             orgId: req.org!.id,
+            isAdmin,
         });
 
         // Wait for job to complete (with timeout)

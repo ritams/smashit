@@ -9,8 +9,8 @@ import { createLogger } from '../lib/core.js';
 const log = createLogger('BookingWorker');
 
 export const processBooking = async (job: Job<BookingJobData>) => {
-    const { spaceId, userId, userName, startTime, endTime, participants, notes, slotIndex, slotId, orgId } = job.data;
-    log.info('Processing booking', { spaceId, userId, slotIndex, slotId });
+    const { spaceId, userId, userName, startTime, endTime, participants, notes, slotIndex, slotId, orgId, isAdmin } = job.data;
+    log.info('Processing booking', { spaceId, userId, slotIndex, slotId, isAdmin });
 
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -25,8 +25,8 @@ export const processBooking = async (job: Job<BookingJobData>) => {
 
     const rules = space.rules;
 
-    // === RULE VALIDATION ===
-    if (rules) {
+    // === RULE VALIDATION === (Skip for admins)
+    if (rules && !isAdmin) {
         const now = new Date();
         const durationMin = (end.getTime() - start.getTime()) / (1000 * 60);
 

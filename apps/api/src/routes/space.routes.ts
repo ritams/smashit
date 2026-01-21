@@ -45,15 +45,21 @@ spaceRoutes.get('/all/availability', async (req: OrgRequest, res, next) => {
             },
         });
 
-        const availabilityPromises = spaces.map(space =>
-            getDetailedSpaceAvailability({
-                spaceId: space.id,
-                date,
-                orgTimezone: queryTimezone || req.org?.timezone
-            })
-        );
+        const availabilityPromises = spaces.map(async space => {
+            try {
+                return await getDetailedSpaceAvailability({
+                    spaceId: space.id,
+                    date,
+                    orgTimezone: queryTimezone || req.org?.timezone
+                });
+            } catch (error) {
+                // Log error but don't fail the entire request
+                console.error(`Failed to get availability for space ${space.id}:`, error);
+                return null;
+            }
+        });
 
-        const results = await Promise.all(availabilityPromises);
+        const results = (await Promise.all(availabilityPromises)).filter((r): r is NonNullable<typeof r> => r !== null);
 
         res.json({
             success: true,

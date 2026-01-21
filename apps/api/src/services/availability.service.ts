@@ -119,6 +119,7 @@ export async function getDetailedSpaceAvailability(params: AvailabilityParams) {
         space: {
             id: space.id,
             name: space.name,
+            type: space.type,
             capacity: space.capacity,
             slots: space.slots,
             rules: space.rules,
