@@ -222,7 +222,7 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-8">
+        <div className="max-w-4xl mx-auto py-8 px-4 sm:px-0">
             {/* Header */}
             <div className="mb-10">
                 <h1 className="text-2xl font-medium tracking-tight">Admin</h1>
@@ -405,7 +405,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <div>
                                         <p className="font-medium text-sm">{member.name || 'Unnamed'}</p>
-                                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                                        <p className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-none">{member.email}</p>
                                     </div>
                                 </div>
                                 <span className={`text-xs font-medium ${member.role === 'ADMIN' ? 'text-primary' : 'text-muted-foreground'}`}>

@@ -84,20 +84,20 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto py-4">
+        <div className="max-w-3xl mx-auto py-4 px-4 sm:px-0">
             {/* Header Section */}
-            <div className="flex items-start gap-6 mb-10">
-                <Avatar className="h-20 w-20 border border-border">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-8 sm:mb-10 text-center sm:text-left">
+                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border border-border">
                     <AvatarImage src={session?.user?.image || ''} className="object-cover" />
-                    <AvatarFallback className="text-xl font-medium bg-primary/10 text-primary">
+                    <AvatarFallback className="text-xl sm:text-2xl font-medium bg-primary/10 text-primary">
                         {getInitials(profile?.name || 'U')}
                     </AvatarFallback>
                 </Avatar>
 
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 space-y-2 sm:space-y-1">
                     <h1 className="text-2xl font-medium tracking-tight">{profile?.name}</h1>
                     <p className="text-muted-foreground">{profile?.email}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-2 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                             <Calendar className="h-3.5 w-3.5" />
                             Joined {new Date(profile?.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
@@ -114,16 +114,18 @@ export default function ProfilePage() {
                         onClick={() => setIsEditing(true)}
                         variant="outline"
                         size="sm"
+                        className="w-full sm:w-auto"
                     >
                         <Pencil className="h-3.5 w-3.5 mr-1.5" />
                         Edit
                     </Button>
                 ) : (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto justify-center">
                         <Button
                             onClick={handleCancel}
                             variant="ghost"
                             size="sm"
+                            className="flex-1 sm:flex-none"
                         >
                             Cancel
                         </Button>
@@ -131,6 +133,7 @@ export default function ProfilePage() {
                             onClick={handleSave}
                             disabled={isSaving}
                             size="sm"
+                            className="flex-1 sm:flex-none"
                         >
                             {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
                             Save

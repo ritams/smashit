@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
+import Link from 'next/link';
+import { Grid, Ticket, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LayoutGrid, CalendarDays, User, Settings } from 'lucide-react';
 
 export function MobileNav() {
     const pathname = usePathname();
@@ -12,55 +12,42 @@ export function MobileNav() {
 
     const navItems = [
         {
-            name: 'Book',
             href: `/org/${orgSlug}/book`,
-            icon: LayoutGrid,
-            activeMatch: '/book'
+            label: 'Book',
+            icon: Grid,
+            isActive: (path: string) => path.includes('/book')
         },
         {
-            name: 'My Bookings',
             href: `/org/${orgSlug}/my-bookings`,
-            icon: CalendarDays,
-            activeMatch: '/my-bookings'
+            label: 'My Bookings',
+            icon: Ticket,
+            isActive: (path: string) => path.includes('/my-bookings')
         },
         {
-            name: 'Account',
-            href: `/org/${orgSlug}/account`,
+            href: `/org/${orgSlug}/profile`,
+            label: 'Account',
             icon: User,
-            activeMatch: '/account'
+            isActive: (path: string) => path.includes('/profile') || path.includes('/admin')
         }
     ];
 
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border/50 pb-[env(safe-area-inset-bottom)]">
-            <nav className="flex items-center justify-around h-16">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
+            <nav className="flex items-center justify-around h-16 px-2">
                 {navItems.map((item) => {
-                    const isActive = pathname?.includes(item.activeMatch);
+                    const active = item.isActive(pathname || '');
                     const Icon = item.icon;
-
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex flex-col items-center justify-center w-full h-full gap-1 transition-all duration-300",
-                                isActive
-                                    ? "text-primary"
-                                    : "text-muted-foreground hover:text-foreground"
+                                "flex flex-col items-center justify-center w-full h-full space-y-1 active:scale-95 transition-all duration-200",
+                                active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <div className={cn(
-                                "p-1.5 rounded-full transition-all duration-300",
-                                isActive ? "bg-primary/10" : "bg-transparent"
-                            )}>
-                                <Icon className={cn(
-                                    "h-5 w-5 transition-transform duration-300",
-                                    isActive && "scale-110"
-                                )} />
-                            </div>
-                            <span className="text-[10px] font-medium tracking-wide">
-                                {item.name}
-                            </span>
+                            <Icon className="h-6 w-6" strokeWidth={1.5} />
+                            {active && <span className="text-[10px] font-medium animate-in fade-in slide-in-from-bottom-1 duration-200">{item.label}</span>}
                         </Link>
                     );
                 })}

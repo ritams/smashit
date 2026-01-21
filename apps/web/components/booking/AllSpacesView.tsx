@@ -22,6 +22,8 @@ interface AllSpacesViewProps {
     refreshTrigger?: number;
     spaceType?: string;
     categoryName?: string;
+    viewMode?: 'ALL' | 'SINGLE';
+    mobileSelectedSpaceId?: string;
 }
 
 interface Booking {
@@ -57,35 +59,52 @@ interface SpaceAvailability {
     slots: Slot[];
 }
 
-export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger, spaceType, categoryName }: AllSpacesViewProps) {
+export function AllSpacesView({
+    date,
+    orgSlug,
+    onBook,
+    onCancel,
+    refreshTrigger,
+    spaceType,
+    categoryName,
+    viewMode = 'ALL',
+    mobileSelectedSpaceId
+}: AllSpacesViewProps) {
     const { data: session } = useSession();
     const [data, setData] = useState<SpaceAvailability[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Filter data by space type if provided
-    const filteredData = spaceType
+    let filteredData = spaceType
         ? data.filter(d => d.space.type === spaceType)
         : data;
+
+    // Filter for Single View Mode
+    if (viewMode === 'SINGLE' && mobileSelectedSpaceId) {
+        filteredData = filteredData.filter(d => d.space.id === mobileSelectedSpaceId);
+    }
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const formattedDate = format(date, 'yyyy-MM-dd');
-            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const result = await api.getAllAvailability(orgSlug, formattedDate, timezone);
-            setData(result);
-        } catch (err) {
-            console.error(err);
-            toast.error('Failed to load availability');
+            const dateStr = format(date, 'yyyy-MM-dd');
+            const res = await api.getAllAvailability(orgSlug, dateStr);
+            setData(res);
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to load spaces');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-    }, [date, orgSlug]);
+    }, [orgSlug, date]);
 
     useEffect(() => {
-        if (orgSlug) {
-            fetchData();
-        }
-    }, [date, orgSlug, refreshTrigger, fetchData]);
+        fetchData();
+    }, [fetchData, refreshTrigger]);
+
+
+
+
 
     if (loading) {
         return (
@@ -98,15 +117,7 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
         );
     }
 
-    if (filteredData.length === 0) {
-        return (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mb-3" />
-                <p className="text-lg font-medium">No {categoryName ? categoryName.toLowerCase() + ' ' : ''}spaces available</p>
-                <p className="text-sm">Contact your administrator to set up booking spaces.</p>
-            </div>
-        );
-    }
+    // ... (Rest of component until return)
 
     const now = new Date();
     const endHour = 22;
@@ -123,11 +134,15 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
         }
     }
 
-    if (isToday && now.getHours() >= endHour) {
+    if (filteredData.length === 0) {
+        if (viewMode === 'SINGLE' && !mobileSelectedSpaceId) {
+            return <div className="p-8 text-center text-muted-foreground">Select a space to view availability</div>
+        }
         return (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                <p className="text-lg font-medium">Booking closed for today</p>
-                <p className="text-sm">Select another date to make a reservation.</p>
+                <AlertCircle className="h-8 w-8 mb-3" />
+                <p className="text-lg font-medium">No {categoryName ? categoryName.toLowerCase() + ' ' : ''}spaces available</p>
+                <p className="text-sm">Contact your administrator to set up booking spaces.</p>
             </div>
         );
     }
@@ -168,8 +183,8 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
     return (
         <TooltipProvider>
             <div className="h-full flex flex-col overflow-hidden">
-                {/* Legend */}
-                <div className="flex-shrink-0 flex items-center gap-6 text-sm pb-4">
+                {/* Legend - HIDDEN ON MOBILE to save space if needed, or kept simple */}
+                <div className="hidden md:flex flex-shrink-0 items-center gap-6 text-sm pb-4">
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded border border-border bg-background" />
                         <span className="text-muted-foreground text-xs">Available</span>
@@ -186,6 +201,8 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
 
                 {/* Scrollable Grid Container - Desktop */}
                 <div className="hidden md:flex flex-1 overflow-auto border rounded-lg bg-card">
+                    {/* ... Desktop Table Implementation (keeping existing logic via ... or careful copy) ... */}
+                    {/* actually I need to preserve the desktop table exactly. */}
                     <table className="w-full border-collapse min-w-max">
                         {/* Sticky Header - Space Names */}
                         <thead className="sticky top-0 z-20 bg-muted">
@@ -351,15 +368,25 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
                     </table>
                 </div>
 
-                {/* Mobile View - Cards */}
-                <div className="md:hidden flex flex-col gap-6 pb-20">
+                {/* Mobile View - Configurable Mode */}
+                <div className="md:hidden flex flex-col gap-6 pb-24 px-4 overflow-y-auto no-scrollbar">
                     {filteredData.map((item) => (
-                        <div key={item.space.id} className="bg-card border rounded-xl overflow-hidden shadow-sm">
-                            <div className="bg-muted/30 px-4 py-3 border-b">
-                                <h3 className="font-semibold text-base">{item.space.name}</h3>
-                                <p className="text-xs text-muted-foreground capitalize">{item.space.type}</p>
+                        <div key={item.space.id} className={cn(
+                            "overflow-hidden",
+                            viewMode === 'SINGLE' ? "" : "border-b border-border/50 pb-6 last:border-0"
+                        )}>
+                            {/* Header for space - Hide in single view if obvious, but keep for now */}
+                            <div className={cn(
+                                "flex items-center justify-between mb-3",
+                                viewMode === 'SINGLE' ? "hidden" : ""
+                            )}>
+                                <h3 className="font-semibold text-sm">{item.space.name}</h3>
+                                <div className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full capitalize">
+                                    {item.space.type}
+                                </div>
                             </div>
-                            <div className="p-4 space-y-4">
+
+                            <div className="space-y-3">
                                 {timeRows.map((rowTime) => {
                                     const rowHour = rowTime.getHours();
                                     const slot = item.slots.find(s => {
@@ -380,11 +407,11 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
 
                                     return (
                                         <div key={rowTime.toISOString()} className="flex items-center gap-3">
-                                            <div className="w-16 flex-shrink-0 text-right">
-                                                <div className="text-sm font-medium">{format(rowTime, 'h:mm')}</div>
-                                                <div className="text-[10px] text-muted-foreground uppercase">{format(rowTime, 'a')}</div>
+                                            <div className="w-10 flex-shrink-0 text-left">
+                                                <div className="text-xs font-semibold">{format(rowTime, 'h:mm')}</div>
+                                                <div className="text-[9px] text-muted-foreground uppercase font-medium">{format(rowTime, 'a')}</div>
                                             </div>
-                                            <div className="flex-1 grid grid-cols-2 gap-2">
+                                            <div className="flex-1 flex gap-2 overflow-x-auto no-scrollbar -mr-4 pr-4 pl-1">
                                                 {configuredSlots.map((subSlot: any, idx: number) => {
                                                     const booked = slot.bookings?.find(b =>
                                                         b.slotId === subSlot.id || b.slotIndex === idx
@@ -409,20 +436,26 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
                                                                 }
                                                             }}
                                                             className={cn(
-                                                                "h-10 rounded-md border flex items-center justify-center transition-all text-xs relative",
+                                                                "h-8 min-w-[70px] rounded-lg border flex items-center justify-center transition-all text-xs relative overflow-hidden flex-shrink-0",
                                                                 booked
                                                                     ? isMine
                                                                         ? "bg-primary/10 border-primary/30 text-primary"
-                                                                        : "bg-muted border-border text-muted-foreground cursor-not-allowed opacity-70"
+                                                                        : "bg-muted border-border text-muted-foreground/50 cursor-not-allowed"
                                                                     : isDisabled
-                                                                        ? "bg-muted/20 border-border/20 opacity-30 cursor-not-allowed"
-                                                                        : "bg-background border-border hover:border-primary hover:bg-primary/5 active:bg-primary/10"
+                                                                        ? "bg-muted/10 border-border/10 opacity-30 cursor-not-allowed"
+                                                                        : "bg-card border-border shadow-sm hover:border-primary hover:bg-primary/5 active:bg-primary/10"
                                                             )}
                                                         >
                                                             {booked ? (
-                                                                isMine ? 'My Booking' : 'Booked'
+                                                                <div className="flex items-center justify-center gap-1.5 w-full px-2">
+                                                                    {isMine ? (
+                                                                        <span className="text-[10px] font-medium">My Book</span>
+                                                                    ) : (
+                                                                        <span className="truncate text-[10px] text-muted-foreground">Booked</span>
+                                                                    )}
+                                                                </div>
                                                             ) : (
-                                                                subSlot.name
+                                                                <span className="text-muted-foreground/80 font-medium">{subSlot.name}</span>
                                                             )}
                                                         </button>
                                                     );
@@ -434,8 +467,11 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
                             </div>
                         </div>
                     ))}
+
+                    {/* Spacer for bottom nav */}
+                    <div className="h-20" />
                 </div>
             </div>
-        </TooltipProvider >
+        </TooltipProvider>
     );
 }

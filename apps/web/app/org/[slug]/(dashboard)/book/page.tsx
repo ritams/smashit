@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { format, isSameDay, addDays, startOfToday, startOfDay, endOfDay, isBefore, isAfter } from 'date-fns';
-import { ChevronLeft, ChevronRight, Loader2, Trophy, Activity, Dumbbell, Circle, Target, Users, Waves, Monitor } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Trophy, Activity, Dumbbell, Circle, Target, Users, Waves, Monitor, Calendar as CalendarIcon, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +21,13 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import { signOut } from 'next-auth/react';
+import { getInitials } from '@/lib/utils';
+import Link from 'next/link';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -90,6 +96,10 @@ export default function BookPage() {
     const [mounted, setMounted] = useState(false);
     const [viewDate, setViewDate] = useState<Date>(initialDate);
     const [allSpacesRefreshKey, setAllSpacesRefreshKey] = useState(0);
+
+    // View State
+    const [viewMode, setViewMode] = useState<'ALL' | 'SINGLE'>('ALL'); // 'ALL' | 'SINGLE'
+    const [mobileSelectedSpace, setMobileSelectedSpace] = useState<Space | null>(null);
 
     // Booking dialog state
     const [bookingInfo, setBookingInfo] = useState<{
@@ -165,6 +175,7 @@ export default function BookPage() {
             setSpaces(data);
             if (data.length > 0 && !selectedSpace) {
                 setSelectedSpace(data[0]);
+                setMobileSelectedSpace(data[0]);
             }
         } catch (err) {
             console.error('Failed to fetch spaces:', err);
@@ -246,9 +257,85 @@ export default function BookPage() {
 
     return (
         <div className="h-full flex flex-col">
-            <div className="w-full">
+            {/* Mobile View Controls */}
+            <div className="md:hidden flex flex-col gap-4 pb-2">
+                {/* Date Selection Area */}
+                <div className="flex items-center gap-3 pl-4 pr-2 pt-2">
+                    {/* Scrollable Date Strip */}
+                    <div className="flex-1 -mr-2 overflow-hidden">
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pr-4 pb-2 snap-x mask-fade-right">
+                            {weekDates.map((date) => {
+                                const isSelected = isSameDay(date, selectedDate);
+                                const isToday = isSameDay(date, startOfToday());
+                                return (
+                                    <button
+                                        key={date.toISOString()}
+                                        onClick={() => setSelectedDate(date)}
+                                        className={cn(
+                                            'flex-shrink-0 flex flex-col items-center justify-center min-w-[48px] h-12 rounded-xl transition-all snap-start border',
+                                            isSelected
+                                                ? 'bg-primary border-primary text-primary-foreground shadow-sm scale-100'
+                                                : 'bg-card border-border/50 text-muted-foreground scale-95 opacity-70'
+                                        )}
+                                    >
+                                        <span className="text-[9px] uppercase font-bold tracking-wider opacity-90">
+                                            {format(date, 'EEE')}
+                                        </span>
+                                        <span className={cn("text-lg font-bold leading-none", isSelected ? "text-primary-foreground" : "text-foreground")}>
+                                            {format(date, 'd')}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Calendar Picker Trigger */}
+                    <div className="flex-shrink-0 pl-1 border-l border-border/50">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className="h-10 w-10 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground hover:text-foreground active:scale-95 transition-all">
+                                    <CalendarIcon className="h-5 w-5" />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                                <Calendar
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={(date) => date && setSelectedDate(date)}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                </div>
+
+                {/* Mobile Categories - Pills */}
+                {availableCategories.length > 0 && (
+                    <div className="w-full overflow-x-auto no-scrollbar px-4 pb-1">
+                        <div className="flex items-center gap-2">
+                            {availableCategories.map((type) => (
+                                <button
+                                    key={type}
+                                    onClick={() => setSelectedCategory(type === selectedCategory ? null : type)}
+                                    className={cn(
+                                        "flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap",
+                                        selectedCategory === type
+                                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                            : "bg-background border-border text-muted-foreground"
+                                    )}
+                                >
+                                    {SPACE_TYPES[type as SpaceType]?.label || type}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="hidden md:block w-full">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-border/50 pb-4 mb-4">
-                    {/* Date Navigation */}
+                    {/* Desktop Date Navigation */}
                     <div className="flex items-center gap-4">
                         <div className="flex items-center bg-background rounded-full border border-border/50 p-1">
                             <button
@@ -377,128 +464,130 @@ export default function BookPage() {
                         </div>
                     )}
                 </div>
+            </div>
 
 
-                {/* Main Content - All Spaces Grid */}
-                <div className="flex-1 overflow-hidden w-full">
-                    <AllSpacesView
-                        date={selectedDate}
-                        orgSlug={orgSlug}
-                        spaceType={selectedCategory || undefined}
-                        categoryName={selectedCategory ? (SPACE_TYPES[selectedCategory as SpaceType]?.label || selectedCategory) : undefined}
-                        refreshTrigger={allSpacesRefreshKey}
-                        onBook={({ space, slotRaw, subSlot, idx }) => {
-                            setSelectedSpace(space);
-                            setBookingInfo({
-                                slot: {
-                                    hour: new Date(slotRaw.startTime).getHours(),
-                                    startTime: new Date(slotRaw.startTime),
-                                    endTime: new Date(slotRaw.endTime),
-                                    bookings: slotRaw.bookings || []
-                                },
-                                slotId: subSlot.id,
-                                slotName: subSlot.name,
-                                index: idx
-                            });
-                        }}
-                        onCancel={({ booking, slot, space }) => {
-                            setSelectedSpace(space);
-                            setCancelInfo({
-                                booking: {
-                                    ...booking,
-                                    startTime: booking.startTime,
-                                    endTime: booking.endTime
-                                },
-                                slot: {
-                                    hour: new Date(slot.startTime).getHours(),
-                                    startTime: new Date(slot.startTime),
-                                    endTime: new Date(slot.endTime),
-                                    bookings: slot.bookings || []
-                                }
-                            });
-                        }}
-                    />
-                </div>
+            {/* Main Content - All Spaces Grid */}
+            <div className="flex-1 overflow-hidden w-full">
+                <AllSpacesView
+                    date={selectedDate}
+                    orgSlug={orgSlug}
+                    spaceType={selectedCategory || undefined}
+                    categoryName={selectedCategory ? (SPACE_TYPES[selectedCategory as SpaceType]?.label || selectedCategory) : undefined}
+                    refreshTrigger={allSpacesRefreshKey}
+                    viewMode={viewMode}
+                    mobileSelectedSpaceId={mobileSelectedSpace?.id}
+                    onBook={({ space, slotRaw, subSlot, idx }) => {
+                        setSelectedSpace(space);
+                        setBookingInfo({
+                            slot: {
+                                hour: new Date(slotRaw.startTime).getHours(),
+                                startTime: new Date(slotRaw.startTime),
+                                endTime: new Date(slotRaw.endTime),
+                                bookings: slotRaw.bookings || []
+                            },
+                            slotId: subSlot.id,
+                            slotName: subSlot.name,
+                            index: idx
+                        });
+                    }}
+                    onCancel={({ booking, slot, space }) => {
+                        setSelectedSpace(space);
+                        setCancelInfo({
+                            booking: {
+                                ...booking,
+                                startTime: booking.startTime,
+                                endTime: booking.endTime
+                            },
+                            slot: {
+                                hour: new Date(slot.startTime).getHours(),
+                                startTime: new Date(slot.startTime),
+                                endTime: new Date(slot.endTime),
+                                bookings: slot.bookings || []
+                            }
+                        });
+                    }}
+                />
+            </div>
 
-                {/* Booking Dialog */}
-                <Dialog open={!!bookingInfo} onOpenChange={() => setBookingInfo(null)}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Confirm Booking</DialogTitle>
-                            <DialogDescription>
-                                Review your reservation details.
-                            </DialogDescription>
-                        </DialogHeader>
-                        {bookingInfo && selectedSpace && (
-                            <div className="py-4 space-y-3">
-                                <div className="flex justify-between py-2 border-b">
-                                    <span className="text-muted-foreground">Space</span>
-                                    <span className="font-medium">{selectedSpace.name}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b">
-                                    <span className="text-muted-foreground">Date</span>
-                                    <span className="font-medium">{format(bookingInfo.slot.startTime, 'EEEE, MMM d')}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b">
-                                    <span className="text-muted-foreground">Time</span>
-                                    <span className="font-medium">{format(bookingInfo.slot.startTime, 'h:mm a')} – {format(bookingInfo.slot.endTime, 'h:mm a')}</span>
-                                </div>
-                                <div className="flex justify-between py-2">
-                                    <span className="text-muted-foreground">Slot</span>
-                                    <span className="font-medium text-primary">{bookingInfo.slotName}</span>
-                                </div>
+            {/* Booking Dialog */}
+            <Dialog open={!!bookingInfo} onOpenChange={() => setBookingInfo(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Confirm Booking</DialogTitle>
+                        <DialogDescription>
+                            Review your reservation details.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {bookingInfo && selectedSpace && (
+                        <div className="py-4 space-y-3">
+                            <div className="flex justify-between py-2 border-b">
+                                <span className="text-muted-foreground">Space</span>
+                                <span className="font-medium">{selectedSpace.name}</span>
                             </div>
-                        )}
-                        <DialogFooter className="gap-2">
-                            <Button variant="ghost" onClick={() => setBookingInfo(null)}>Cancel</Button>
-                            <Button onClick={handleBook} disabled={isBooking}>
-                                {isBooking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Confirm
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Cancel Dialog */}
-                <Dialog open={!!cancelInfo} onOpenChange={() => setCancelInfo(null)}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Cancel this booking?</DialogTitle>
-                            <DialogDescription>
-                                The slot will become available for other members.
-                            </DialogDescription>
-                        </DialogHeader>
-                        {cancelInfo && selectedSpace && (
-                            <div className="py-4 space-y-3">
-                                <div className="flex justify-between py-2 border-b border-border">
-                                    <span className="text-muted-foreground">Space</span>
-                                    <span className="font-medium">{selectedSpace.name}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b border-border">
-                                    <span className="text-muted-foreground">Date</span>
-                                    <span className="font-medium">{format(cancelInfo.slot.startTime, 'EEEE, MMM d')}</span>
-                                </div>
-                                <div className="flex justify-between py-2">
-                                    <span className="text-muted-foreground">Time</span>
-                                    <span className="font-medium">{format(cancelInfo.slot.startTime, 'h:mm a')} – {format(cancelInfo.slot.endTime, 'h:mm a')}</span>
-                                </div>
+                            <div className="flex justify-between py-2 border-b">
+                                <span className="text-muted-foreground">Date</span>
+                                <span className="font-medium">{format(bookingInfo.slot.startTime, 'EEEE, MMM d')}</span>
                             </div>
-                        )}
-                        <DialogFooter className="gap-2">
-                            <Button variant="outline" onClick={() => setCancelInfo(null)}>Keep booking</Button>
-                            <Button
-                                variant="ghost"
-                                onClick={handleCancel}
-                                disabled={isCanceling}
-                                className="text-muted-foreground hover:text-foreground"
-                            >
-                                {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Cancel
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div >
+                            <div className="flex justify-between py-2 border-b">
+                                <span className="text-muted-foreground">Time</span>
+                                <span className="font-medium">{format(bookingInfo.slot.startTime, 'h:mm a')} – {format(bookingInfo.slot.endTime, 'h:mm a')}</span>
+                            </div>
+                            <div className="flex justify-between py-2">
+                                <span className="text-muted-foreground">Slot</span>
+                                <span className="font-medium text-primary">{bookingInfo.slotName}</span>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter className="gap-2">
+                        <Button variant="ghost" onClick={() => setBookingInfo(null)}>Cancel</Button>
+                        <Button onClick={handleBook} disabled={isBooking}>
+                            {isBooking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cancel Dialog */}
+            <Dialog open={!!cancelInfo} onOpenChange={() => setCancelInfo(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Cancel this booking?</DialogTitle>
+                        <DialogDescription>
+                            The slot will become available for other members.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {cancelInfo && selectedSpace && (
+                        <div className="py-4 space-y-3">
+                            <div className="flex justify-between py-2 border-b border-border">
+                                <span className="text-muted-foreground">Space</span>
+                                <span className="font-medium">{selectedSpace.name}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-border">
+                                <span className="text-muted-foreground">Date</span>
+                                <span className="font-medium">{format(cancelInfo.slot.startTime, 'EEEE, MMM d')}</span>
+                            </div>
+                            <div className="flex justify-between py-2">
+                                <span className="text-muted-foreground">Time</span>
+                                <span className="font-medium">{format(cancelInfo.slot.startTime, 'h:mm a')} – {format(cancelInfo.slot.endTime, 'h:mm a')}</span>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setCancelInfo(null)}>Keep booking</Button>
+                        <Button
+                            variant="ghost"
+                            onClick={handleCancel}
+                            disabled={isCanceling}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
