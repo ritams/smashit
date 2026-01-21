@@ -184,8 +184,8 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
                     </div>
                 </div>
 
-                {/* Scrollable Grid Container */}
-                <div className="flex-1 overflow-auto border rounded-lg bg-card">
+                {/* Scrollable Grid Container - Desktop */}
+                <div className="hidden md:flex flex-1 overflow-auto border rounded-lg bg-card">
                     <table className="w-full border-collapse min-w-max">
                         {/* Sticky Header - Space Names */}
                         <thead className="sticky top-0 z-20 bg-muted">
@@ -349,6 +349,91 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger,
                             })}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile View - Cards */}
+                <div className="md:hidden flex flex-col gap-6 pb-20">
+                    {filteredData.map((item) => (
+                        <div key={item.space.id} className="bg-card border rounded-xl overflow-hidden shadow-sm">
+                            <div className="bg-muted/30 px-4 py-3 border-b">
+                                <h3 className="font-semibold text-base">{item.space.name}</h3>
+                                <p className="text-xs text-muted-foreground capitalize">{item.space.type}</p>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                {timeRows.map((rowTime) => {
+                                    const rowHour = rowTime.getHours();
+                                    const slot = item.slots.find(s => {
+                                        const sTime = new Date(s.startTime);
+                                        return sTime.getHours() === rowHour && isSameDay(sTime, rowTime);
+                                    });
+
+                                    if (!slot) return null;
+
+                                    const configuredSlots = item.space.slots?.length > 0
+                                        ? item.space.slots
+                                        : Array.from({ length: item.space.capacity }, (_, i) => ({
+                                            id: `legacy-${i}`,
+                                            name: `${i + 1}`,
+                                            number: i + 1,
+                                            isActive: true
+                                        }));
+
+                                    return (
+                                        <div key={rowTime.toISOString()} className="flex items-center gap-3">
+                                            <div className="w-16 flex-shrink-0 text-right">
+                                                <div className="text-sm font-medium">{format(rowTime, 'h:mm')}</div>
+                                                <div className="text-[10px] text-muted-foreground uppercase">{format(rowTime, 'a')}</div>
+                                            </div>
+                                            <div className="flex-1 grid grid-cols-2 gap-2">
+                                                {configuredSlots.map((subSlot: any, idx: number) => {
+                                                    const booked = slot.bookings?.find(b =>
+                                                        b.slotId === subSlot.id || b.slotIndex === idx
+                                                    );
+                                                    const isMine = booked?.userEmail === session?.user?.email;
+                                                    const slotStartTime = new Date(slot.startTime);
+                                                    const isPast = isBefore(slotStartTime, now);
+                                                    const maxAdvanceDays = item.space.rules?.maxAdvanceDays ?? 7;
+                                                    const maxAllowedDate = endOfDay(addDays(now, maxAdvanceDays));
+                                                    const isTooFarAhead = isAfter(slotStartTime, maxAllowedDate);
+                                                    const isDisabled = isPast || isTooFarAhead;
+
+                                                    return (
+                                                        <button
+                                                            key={`${item.space.id}-${subSlot.id}-${rowHour}`}
+                                                            disabled={isDisabled || (!!booked && !isMine)}
+                                                            onClick={() => {
+                                                                if (isMine && booked) {
+                                                                    onCancel({ booking: booked, slot, space: item.space });
+                                                                } else if (!booked && !isDisabled) {
+                                                                    onBook({ space: item.space, slotRaw: slot, subSlot, idx });
+                                                                }
+                                                            }}
+                                                            className={cn(
+                                                                "h-10 rounded-md border flex items-center justify-center transition-all text-xs relative",
+                                                                booked
+                                                                    ? isMine
+                                                                        ? "bg-primary/10 border-primary/30 text-primary"
+                                                                        : "bg-muted border-border text-muted-foreground cursor-not-allowed opacity-70"
+                                                                    : isDisabled
+                                                                        ? "bg-muted/20 border-border/20 opacity-30 cursor-not-allowed"
+                                                                        : "bg-background border-border hover:border-primary hover:bg-primary/5 active:bg-primary/10"
+                                                            )}
+                                                        >
+                                                            {booked ? (
+                                                                isMine ? 'My Booking' : 'Booked'
+                                                            ) : (
+                                                                subSlot.name
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </TooltipProvider >

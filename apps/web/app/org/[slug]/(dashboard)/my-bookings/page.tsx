@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
-import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, CalendarDays, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -128,29 +128,37 @@ export default function MyBookingsPage() {
                                         : "bg-background border-border hover:border-border/80"
                                 )}
                             >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="space-y-2 flex-1">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="font-medium">{booking.space.name}</h3>
-                                            {isToday && (
-                                                <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
-                                                    Today
-                                                </span>
-                                            )}
-                                            {isTomorrow && (
-                                                <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                                    Tomorrow
-                                                </span>
-                                            )}
+                                <div className="flex flex-col sm:flex-row gap-4 items-start justify-between w-full">
+                                    <div className="space-y-2 flex-1 w-full">
+                                        <div className="flex items-center justify-between sm:justify-start gap-3">
+                                            <h3 className="font-medium text-lg">{booking.space.name}</h3>
+                                            <div className="flex gap-2">
+                                                {isToday && (
+                                                    <span className="text-[10px] font-medium uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary text-primary-foreground">
+                                                        Today
+                                                    </span>
+                                                )}
+                                                {isTomorrow && (
+                                                    <span className="text-[10px] font-medium uppercase tracking-wider px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                                                        Tomorrow
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                            <span>{format(startDate, 'EEEE, MMM d')}</span>
-                                            <span className="text-border">·</span>
-                                            <span>{formatTime(booking.startTime)} – {formatTime(booking.endTime)}</span>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                                            <div className="flex items-center gap-2">
+                                                <CalendarDays className="h-3.5 w-3.5" />
+                                                <span>{format(startDate, 'EEEE, MMM d')}</span>
+                                            </div>
+                                            <span className="hidden sm:inline text-border">·</span>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                <span>{formatTime(booking.startTime)} – {formatTime(booking.endTime)}</span>
+                                            </div>
                                             {(booking.slot || booking.slotIndex !== undefined) && (
                                                 <>
-                                                    <span className="text-border">·</span>
-                                                    <span className="text-primary font-medium">
+                                                    <span className="hidden sm:inline text-border">·</span>
+                                                    <span className="text-primary font-medium bg-primary/5 px-2 py-0.5 rounded text-xs">
                                                         {booking.slot?.name || `Slot ${(booking.slotIndex ?? 0) + 1}`}
                                                     </span>
                                                 </>
@@ -158,9 +166,9 @@ export default function MyBookingsPage() {
                                         </div>
                                     </div>
                                     <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
-                                        className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="w-full sm:w-auto text-destructive hover:text-destructive hover:bg-destructive/5 hover:border-destructive/30"
                                         onClick={() => setCancelingId(booking.id)}
                                     >
                                         Cancel

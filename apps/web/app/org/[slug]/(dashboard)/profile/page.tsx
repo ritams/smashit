@@ -210,29 +210,29 @@ export default function ProfilePage() {
                             {profile.organizations.map((org: any) => (
                                 <div
                                     key={org.id}
-                                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors gap-4"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-medium">
+                                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-medium text-lg">
                                             {org.name.charAt(0)}
                                         </div>
                                         <div>
-                                            <p className="font-medium text-sm">{org.name}</p>
+                                            <p className="font-medium text-base">{org.name}</p>
                                             <p className="text-xs text-muted-foreground">
                                                 {org.role === 'ADMIN' ? 'Admin' : 'Member'}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Link href={`/org/${org.slug}/book`}>
-                                            <Button variant="ghost" size="sm">
+                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                        <Link href={`/org/${org.slug}/book`} className="flex-1 sm:flex-none">
+                                            <Button variant="ghost" size="sm" className="w-full sm:w-auto border sm:border-0 border-border/50">
                                                 <Calendar className="h-3.5 w-3.5 mr-1.5" />
                                                 Book
                                             </Button>
                                         </Link>
                                         {org.role === 'ADMIN' && (
-                                            <Link href={`/org/${org.slug}/admin`}>
-                                                <Button variant="outline" size="sm">
+                                            <Link href={`/org/${org.slug}/admin`} className="flex-1 sm:flex-none">
+                                                <Button variant="outline" size="sm" className="w-full sm:w-auto">
                                                     <Shield className="h-3.5 w-3.5 mr-1.5" />
                                                     Admin
                                                 </Button>

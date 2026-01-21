@@ -5,65 +5,69 @@
 @layer base {
   :root {
     /* Avith Premium Color Palette */
-    
+
     /* Background & Foreground */
-    --background: 20 3% 98%;
-    --foreground: 20 10% 10%;
-    
+    --background: 20 10% 98%;
+    --foreground: 20 15% 15%;
+
     /* Card */
     --card: 0 0% 100%;
-    --card-foreground: 20 10% 10%;
-    
+    --card-foreground: 20 15% 15%;
+
     /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 20 10% 10%;
-    
-    /* Primary - Maroon */
-    --primary: 0 45% 35%;
-    --primary-foreground: 0 0% 100%;
-    
-    /* Secondary - Stone */
-    --secondary: 20 6% 94%;
-    --secondary-foreground: 20 10% 10%;
-    
+    --popover-foreground: 20 15% 15%;
+
+    /* Primary - Deep Rich Maroon */
+    --primary: 0 55% 40%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary - Warm Stone/Beige */
+    --secondary: 30 20% 96%;
+    --secondary-foreground: 20 15% 25%;
+
     /* Muted */
-    --muted: 20 6% 92%;
-    --muted-foreground: 15 10% 40%;
-    
-    /* Accent - Maroon Subtle */
-    --accent: 0 30% 95%;
-    --accent-foreground: 0 45% 30%;
-    
+    --muted: 30 15% 94%;
+    --muted-foreground: 20 10% 45%;
+
+    /* Accent - Elegant Rose/Blush */
+    --accent: 0 30% 96%;
+    --accent-foreground: 0 50% 40%;
+
     /* Destructive */
-    --destructive: 0 65% 45%;
-    --destructive-foreground: 0 0% 100%;
-    
-    /* Success - Sage Green */
-    --success: 150 25% 42%;
-    --success-foreground: 0 0% 100%;
-    
-    /* Warning - Warm Amber */
-    --warning: 35 60% 50%;
-    --warning-foreground: 0 0% 100%;
-    
+    --destructive: 0 75% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success - Sophisticated Sage */
+    --success: 140 35% 45%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning - Golden Amber */
+    --warning: 35 80% 50%;
+    --warning-foreground: 0 0% 98%;
+
     /* Info */
-    --info: 200 60% 45%;
-    --info-foreground: 0 0% 100%;
-    
+    --info: 210 60% 50%;
+    --info-foreground: 0 0% 98%;
+
     /* Border & Input */
-    --border: 20 6% 88%;
-    --input: 20 6% 88%;
-    --ring: 0 45% 35%;
-    
+    --border: 30 10% 88%;
+    --input: 30 10% 88%;
+    --ring: 0 55% 40%;
+
     /* Radius */
-    --radius: 0.5rem;
-    
+    --radius: 0.75rem;
+
+    /* Safe Area Insets for Mobile */
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-bottom: env(safe-area-inset-bottom);
+
     /* Charts */
-    --chart-1: 0 45% 35%;
-    --chart-2: 150 25% 42%;
-    --chart-3: 35 60% 50%;
-    --chart-4: 200 60% 45%;
-    --chart-5: 0 65% 45%;
+    --chart-1: 0 55% 40%;
+    --chart-2: 140 35% 45%;
+    --chart-3: 35 80% 50%;
+    --chart-4: 210 60% 50%;
+    --chart-5: 0 75% 45%;
   }
 }
 
@@ -114,6 +118,7 @@ html {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -124,6 +129,7 @@ html {
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getInitials } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import { MobileNav } from '@/components/layout/MobileNav';
 
 export default function DashboardLayout({
     children,
@@ -139,7 +140,9 @@ export default function DashboardLayout({
             </header>
 
             {/* Main Content */}
-            <main className="container py-6">{children}</main>
+            <main className="container py-6 pb-24 md:pb-6">{children}</main>
+
+            <MobileNav />
         </div>
     );
 }
