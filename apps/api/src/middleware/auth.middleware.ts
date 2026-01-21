@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { prisma } from '@smashit/database';
 import { createError } from './error.middleware.js';
 import { OrgRequest } from './org.middleware.js';
 import { findOrCreateUser, ensureMembership } from '../services/user.service.js';
@@ -81,7 +82,49 @@ export async function authMiddleware(
 
         // If there's an org context, check/create membership
         if (req.org?.id) {
-            const membership = await ensureMembership(user.id, req.org.id, 'MEMBER');
+            // Check Access Control
+            const { allowedDomains, allowedEmails } = req.org;
+            const hasRestrictions = (allowedDomains && allowedDomains.length > 0) || (allowedEmails && allowedEmails.length > 0);
+
+            let isAllowed = !hasRestrictions; // Default allow if no rules
+
+            if (hasRestrictions) {
+                const domain = user.email.split('@')[1];
+                const isDomainAllowed = allowedDomains?.includes(domain);
+                const isEmailAllowed = allowedEmails?.includes(user.email);
+
+                if (isDomainAllowed || isEmailAllowed) {
+                    isAllowed = true;
+                }
+            }
+
+            // Check if already a member (admins are always allowed)
+            let membership = await prisma.membership.findUnique({
+                where: {
+                    userId_orgId: { userId: user.id, orgId: req.org.id },
+                },
+            });
+
+            // If strict enforcement: Block if not allowed, UNLESS they are an existing ADMIN
+            // If they are an existing MEMBER but now banned, we block them.
+            if (!isAllowed) {
+                if (membership && membership.role === 'ADMIN') {
+                    // Admins bypass restrictions
+                    log.info('Admin bypassing access control', { userId: user.id, email: user.email });
+                } else {
+                    // Block access
+                    log.warn('Access denied by policy', { userId: user.id, email: user.email, orgId: req.org.id });
+                    throw createError('Access denied: Your email is not allowed in this organization', 403, 'ACCESS_DENIED');
+                }
+            }
+
+            if (!membership) {
+                membership = await prisma.membership.create({
+                    data: { userId: user.id, orgId: req.org.id, role: 'MEMBER' },
+                });
+                log.info('Created membership', { userId: user.id, orgId: req.org.id, role: 'MEMBER' });
+            }
+
             req.membership = {
                 id: membership.id,
                 role: membership.role as 'ADMIN' | 'MEMBER',

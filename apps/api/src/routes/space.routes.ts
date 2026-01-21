@@ -3,12 +3,14 @@ import { prisma } from '@smashit/database';
 import { getAvailabilitySchema } from '@smashit/validators';
 
 import { orgMiddleware, OrgRequest } from '../middleware/org.middleware.js';
+import { authMiddleware } from '../middleware/auth.middleware.js';
 import { getDetailedSpaceAvailability } from '../services/availability.service.js';
 
 export const spaceRoutes: Router = Router({ mergeParams: true });
 
-// Apply org middleware to all routes
+// Apply org middleware and auth middleware to all routes
 spaceRoutes.use(orgMiddleware);
+spaceRoutes.use(authMiddleware);
 
 // Get all spaces for an organization
 spaceRoutes.get('/', async (req: OrgRequest, res, next) => {

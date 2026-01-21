@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { format, isSameDay, addDays, startOfToday, startOfDay, endOfDay, isBefore, isAfter } from 'date-fns';
-import { ChevronLeft, ChevronRight, Loader2, Trophy, Activity, Dumbbell, Circle, Target, Users, Waves, Monitor, Calendar as CalendarIcon, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Calendar as CalendarIcon, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,16 +21,19 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-    DropdownMenuLabel,
-    DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { signOut } from 'next-auth/react';
-import { getInitials } from '@/lib/utils';
-import Link from 'next/link';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api-client';
 import { AllSpacesView } from '@/components/booking/AllSpacesView';
 import { useSSE } from '@/hooks/use-sse';
@@ -96,6 +99,7 @@ export default function BookPage() {
     const [mounted, setMounted] = useState(false);
     const [viewDate, setViewDate] = useState<Date>(initialDate);
     const [allSpacesRefreshKey, setAllSpacesRefreshKey] = useState(0);
+    const [accessDenied, setAccessDenied] = useState(false);
 
     // View State
     const [viewMode, setViewMode] = useState<'ALL' | 'SINGLE'>('ALL'); // 'ALL' | 'SINGLE'
@@ -109,6 +113,10 @@ export default function BookPage() {
         index: number;
     } | null>(null);
     const [isBooking, setIsBooking] = useState(false);
+    const [recurrence, setRecurrence] = useState<'NONE' | 'DAILY' | 'WEEKLY'>('NONE');
+    const [recurrenceCount, setRecurrenceCount] = useState('10');
+    const [isAdmin, setIsAdmin] = useState(false);
+
 
     // Cancel dialog state
     const [cancelInfo, setCancelInfo] = useState<{
@@ -171,14 +179,35 @@ export default function BookPage() {
     // Fetch spaces
     const fetchSpaces = useCallback(async () => {
         try {
+            setAccessDenied(false);
             const data = await api.getSpaces(orgSlug);
             setSpaces(data);
             if (data.length > 0 && !selectedSpace) {
                 setSelectedSpace(data[0]);
                 setMobileSelectedSpace(data[0]);
             }
-        } catch (err) {
+
+            // Check if admin
+            try {
+                const myOrgs = await api.getMyOrgs();
+                const currentOrg = myOrgs.find((o: any) => o.slug === orgSlug);
+                if (currentOrg?.role === 'ADMIN') {
+                    setIsAdmin(true);
+                }
+            } catch (ignore) { }
+
+        } catch (err: any) {
             console.error('Failed to fetch spaces:', err);
+            // Check for access denied error from backend
+            if (err.message && (
+                err.message.includes('Access denied') ||
+                err.message.includes('not allowed in this organization') ||
+                err.message.includes('status 403')
+            )) {
+                setAccessDenied(true);
+                router.replace(`/org/${orgSlug}/access-denied`);
+                return;
+            }
         }
         setLoadingSpaces(false);
     }, [orgSlug, selectedSpace]);
@@ -200,7 +229,7 @@ export default function BookPage() {
     useSSE({
         orgSlug,
         onMessage: handleSSEMessage,
-        enabled: !!session,
+        enabled: !!session && !accessDenied,
     });
 
     // Handle booking
@@ -215,6 +244,8 @@ export default function BookPage() {
                 endTime: bookingInfo.slot.endTime.toISOString(),
                 slotIndex: bookingInfo.index,
                 slotId: bookingInfo.slotId,
+                recurrence,
+                recurrenceCount: recurrence !== 'NONE' ? parseInt(recurrenceCount) : undefined,
             });
 
             toast.success('Booking confirmed');
@@ -255,6 +286,10 @@ export default function BookPage() {
 
     if (!mounted) return null;
 
+    if (accessDenied) {
+        return null; // Redirecting...
+    }
+
     return (
         <div className="h-full flex flex-col">
             {/* Mobile View Controls */}
@@ -266,7 +301,7 @@ export default function BookPage() {
                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pr-4 pb-2 snap-x mask-fade-right">
                             {weekDates.map((date) => {
                                 const isSelected = isSameDay(date, selectedDate);
-                                const isToday = isSameDay(date, startOfToday());
+                                // const isToday = isSameDay(date, startOfToday());
                                 return (
                                     <button
                                         key={date.toISOString()}
@@ -537,6 +572,43 @@ export default function BookPage() {
                                 <span className="text-muted-foreground">Slot</span>
                                 <span className="font-medium text-primary">{bookingInfo.slotName}</span>
                             </div>
+
+                            {/* Recurrence Options (Admin Only) */}
+                            {isAdmin && (
+                                <div className="space-y-3 pt-3 border-t">
+                                    <div className="flex items-center gap-2">
+                                        <Repeat className="h-4 w-4 text-muted-foreground" />
+                                        <Label className="text-sm font-medium">Recurrence</Label>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Select value={recurrence} onValueChange={(v: any) => setRecurrence(v)}>
+                                            <SelectTrigger className="h-8">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="NONE">One time</SelectItem>
+                                                <SelectItem value="DAILY">Daily</SelectItem>
+                                                <SelectItem value="WEEKLY">Weekly</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        {recurrence !== 'NONE' && (
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    type="number"
+                                                    value={recurrenceCount}
+                                                    onChange={(e) => setRecurrenceCount(e.target.value)}
+                                                    className="h-8"
+                                                    min={2}
+                                                    max={52}
+                                                    placeholder="Count"
+                                                />
+                                                <span className="text-xs text-muted-foreground whitespace-nowrap">times</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                     <DialogFooter className="gap-2">

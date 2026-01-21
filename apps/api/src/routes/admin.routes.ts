@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '@smashit/database';
-import { createSpaceSchema, updateSpaceSchema, updateBookingRulesSchema } from '@smashit/validators';
+import { createSpaceSchema, updateSpaceSchema, updateBookingRulesSchema, updateOrganizationSchema } from '@smashit/validators';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
 import { orgMiddleware } from '../middleware/org.middleware.js';
 import { authMiddleware, adminMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
@@ -29,6 +29,25 @@ export const adminRoutes: Router = Router({ mergeParams: true });
 adminRoutes.use(orgMiddleware);
 adminRoutes.use(authMiddleware);
 adminRoutes.use(adminMiddleware);
+
+// Update org settings
+adminRoutes.patch('/settings', async (req: AuthRequest, res, next) => {
+    try {
+        const data = updateOrganizationSchema.parse(req.body);
+
+        const org = await prisma.organization.update({
+            where: { id: req.org!.id },
+            data: {
+                allowedDomains: data.allowedDomains,
+                allowedEmails: data.allowedEmails,
+            },
+        });
+
+        res.json({ success: true, data: org });
+    } catch (error) {
+        next(error);
+    }
+});
 
 // Dashboard stats
 adminRoutes.get('/stats', async (req: AuthRequest, res, next) => {

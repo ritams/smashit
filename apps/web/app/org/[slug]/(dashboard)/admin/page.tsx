@@ -11,7 +11,9 @@ import {
     Loader2,
     Pencil,
     Copy,
-    ChevronRight
+    ChevronRight,
+    Shield,
+    Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -110,6 +112,14 @@ export default function AdminDashboard() {
     const [newSpaceType, setNewSpaceType] = useState('BADMINTON');
     const [isCreating, setIsCreating] = useState(false);
 
+    // Access Control
+    const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
+    const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
+    const [newDomain, setNewDomain] = useState('');
+    const [newEmail, setNewEmail] = useState('');
+    const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+
+
     const [editingSpace, setEditingSpace] = useState<Space | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [deleteSpaceId, setDeleteSpaceId] = useState<string | null>(null);
@@ -120,14 +130,17 @@ export default function AdminDashboard() {
             if (!session?.user?.email) return;
             setLoading(true);
             try {
-                const [spacesData, statsData, membersData] = await Promise.all([
+                const [spacesData, statsData, membersData, orgData] = await Promise.all([
                     api.getSpaces(orgSlug),
                     api.getStats(orgSlug),
-                    api.getMembers(orgSlug)
+                    api.getMembers(orgSlug),
+                    api.getOrg(orgSlug)
                 ]);
                 setSpaces(spacesData || []);
                 setStats(statsData);
                 setMembers(membersData || []);
+                setAllowedDomains(orgData?.allowedDomains || []);
+                setAllowedEmails(orgData?.allowedEmails || []);
             } catch (err) {
                 console.error('Failed to fetch data:', err);
                 toast.error('Failed to load dashboard data');
@@ -194,6 +207,73 @@ export default function AdminDashboard() {
             toast.error('Update failed');
         }
         setIsUpdating(false);
+    };
+
+    const handleUpdateSettings = async (updates: { allowedDomains?: string[]; allowedEmails?: string[] }) => {
+        if (!session?.user?.email) return;
+        setIsUpdatingSettings(true);
+        try {
+            await api.updateOrgSettings(orgSlug, updates);
+            if (updates.allowedDomains) setAllowedDomains(updates.allowedDomains);
+            if (updates.allowedEmails) setAllowedEmails(updates.allowedEmails);
+            toast.success('Settings updated');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to update settings');
+        }
+        setIsUpdatingSettings(false);
+    };
+
+    const addDomain = () => {
+        if (!newDomain) return;
+
+        // Sanitize: remove @, trim, lowercase
+        const domain = newDomain.trim().toLowerCase().replace(/^@/, '');
+
+        if (!domain) {
+            toast.error('Invalid domain');
+            return;
+        }
+
+        if (allowedDomains.includes(domain)) {
+            toast.error('Domain already added');
+            setNewDomain('');
+            return;
+        }
+
+        const updated = [...allowedDomains, domain];
+        handleUpdateSettings({ allowedDomains: updated });
+        setNewDomain('');
+    };
+
+    const removeDomain = (domain: string) => {
+        const updated = allowedDomains.filter(d => d !== domain);
+        handleUpdateSettings({ allowedDomains: updated });
+    };
+
+    const addEmail = () => {
+        if (!newEmail) return;
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            toast.error('Please enter a valid email address');
+            return;
+        }
+
+        if (allowedEmails.includes(newEmail)) {
+            toast.error('Email already added');
+            setNewEmail('');
+            return;
+        }
+
+        const updated = [...allowedEmails, newEmail];
+        handleUpdateSettings({ allowedEmails: updated });
+        setNewEmail('');
+    };
+
+    const removeEmail = (email: string) => {
+        const updated = allowedEmails.filter(e => e !== email);
+        handleUpdateSettings({ allowedEmails: updated });
     };
 
     const handleDeleteSpace = async () => {
@@ -381,6 +461,80 @@ export default function AdminDashboard() {
                         ))}
                     </div>
                 )}
+            </section>
+
+            {/* Access Control Section */}
+            <section className="mb-12">
+                <div className="flex items-center gap-2 border-b border-border pb-4 mb-6">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <h2 className="text-lg font-medium">Access Control</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Domain Whitelist */}
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <h3 className="font-medium">Allowed Domains</h3>
+                            <p className="text-sm text-muted-foreground">Restrict access to specific email domains (e.g. example.com). Leave empty to allow all.</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Input
+                                placeholder="example.com"
+                                value={newDomain}
+                                onChange={(e) => setNewDomain(e.target.value)}
+                                className="flex-1"
+                            />
+                            <Button size="sm" onClick={addDomain} disabled={isUpdatingSettings || !newDomain}>
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {allowedDomains.length === 0 && (
+                                <span className="text-sm text-muted-foreground italic">No domain restrictions</span>
+                            )}
+                            {allowedDomains.map((domain) => (
+                                <div key={domain} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm">
+                                    <span>{domain}</span>
+                                    <button onClick={() => removeDomain(domain)} className="text-muted-foreground hover:text-foreground">
+                                        <Trash2 className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Email Whitelist */}
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <h3 className="font-medium">Allowed Emails</h3>
+                            <p className="text-sm text-muted-foreground">Allow specific emails regardless of domain restrictions.</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Input
+                                placeholder="user@gmail.com"
+                                value={newEmail}
+                                onChange={(e) => setNewEmail(e.target.value)}
+                                className="flex-1"
+                            />
+                            <Button size="sm" onClick={addEmail} disabled={isUpdatingSettings || !newEmail}>
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {allowedEmails.length === 0 && (
+                                <span className="text-sm text-muted-foreground italic">No specific emails allowed</span>
+                            )}
+                            {allowedEmails.map((email) => (
+                                <div key={email} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm">
+                                    <span>{email}</span>
+                                    <button onClick={() => removeEmail(email)} className="text-muted-foreground hover:text-foreground">
+                                        <Trash2 className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </section>
 
             {/* Members Section */}

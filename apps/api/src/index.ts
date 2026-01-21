@@ -9,6 +9,7 @@ import { sseRoutes } from './routes/sse.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { startBookingWorker } from './workers/booking.worker.js';
 import { validateEnv, generalLimiter, createLogger } from './lib/core.js';
+import { createError } from './middleware/error.middleware.js';
 
 const log = createLogger('Server');
 const app = express();
@@ -39,6 +40,11 @@ app.use('/api/orgs/:slug/spaces', spaceRoutes);
 app.use('/api/orgs/:slug/bookings', bookingRoutes);
 app.use('/api/orgs/:slug/admin', adminRoutes);
 app.use('/api/events', sseRoutes);
+
+// 404 Handler
+app.use((_req, _res, next) => {
+    next(createError('Route not found', 404, 'NOT_FOUND'));
+});
 
 // Error handler
 app.use(errorHandler);

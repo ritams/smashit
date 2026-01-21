@@ -43,6 +43,8 @@ model Organization {
   name        String
   slug        String       @unique
   timezone    String       @default("Asia/Kolkata")
+  allowedDomains String[]  @default([])
+  allowedEmails  String[]  @default([])
   settings    Json         @default("{}")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -114,6 +116,7 @@ model Booking {
   participants Json          @default("[]")
   slotIndex    Int?
   slotId       String?
+  recurrenceGroupId String?
   notes        String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

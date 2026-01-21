@@ -7,6 +7,8 @@ export interface OrgRequest extends Request {
         id: string;
         slug: string;
         timezone: string;
+        allowedDomains: string[];
+        allowedEmails: string[];
     };
 }
 
@@ -24,7 +26,13 @@ export async function orgMiddleware(
 
         const org = await prisma.organization.findUnique({
             where: { slug: slug as string },
-            select: { id: true, slug: true, timezone: true },
+            select: {
+                id: true,
+                slug: true,
+                timezone: true,
+                allowedDomains: true,
+                allowedEmails: true
+            },
         });
 
         if (!org) {

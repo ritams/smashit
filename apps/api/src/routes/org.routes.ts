@@ -22,6 +22,8 @@ orgRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) 
                 slug: true,
                 timezone: true,
                 settings: true,
+                allowedDomains: true,
+                allowedEmails: true,
             },
         });
 

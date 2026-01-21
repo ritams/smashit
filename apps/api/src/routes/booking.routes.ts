@@ -94,6 +94,64 @@ bookingRoutes.post('/', bookingLimiter, async (req: AuthRequest, res, next) => {
 
         // Add to queue for processing (admins bypass rules)
         const isAdmin = req.membership?.role === 'ADMIN';
+
+        // Check recurrence (Admin only)
+        if (data.recurrence && data.recurrence !== 'NONE') {
+            if (!isAdmin) {
+                return res.status(403).json({
+                    success: false,
+                    error: { code: 'FORBIDDEN', message: 'Only admins can create recurring bookings' },
+                });
+            }
+
+            const jobs: any[] = [];
+            const recurrenceGroupId = crypto.randomUUID();
+            let currentDate = new Date(data.startTime);
+            const endDate = data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null;
+            const count = data.recurrenceCount || 10; // Default limit
+            const durationMs = new Date(data.endTime).getTime() - new Date(data.startTime).getTime();
+
+            for (let i = 0; i < count; i++) {
+                // If end date is set, stop if we pass it
+                if (endDate && currentDate > endDate) break;
+
+                const startIso = currentDate.toISOString();
+                const endIso = new Date(currentDate.getTime() + durationMs).toISOString();
+
+                jobs.push({
+                    name: 'create-booking',
+                    data: {
+                        spaceId: data.spaceId,
+                        userId: req.user!.id,
+                        userName: req.user!.name,
+                        startTime: startIso,
+                        endTime: endIso,
+                        participants: data.participants || [],
+                        notes: data.notes,
+                        slotIndex: data.slotIndex,
+                        slotId: data.slotId,
+                        orgId: req.org!.id,
+                        isAdmin,
+                        recurrenceGroupId, // Link them
+                    }
+                });
+
+                // Advance date
+                if (data.recurrence === 'DAILY') {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                } else if (data.recurrence === 'WEEKLY') {
+                    currentDate.setDate(currentDate.getDate() + 7);
+                }
+            }
+
+            // Add all jobs to queue
+            const addedJobs = await (bookingQueue as any).addBulk(jobs);
+
+            // Wait for first job? Or just return success?
+            // Returning success immediately for bulk
+            return res.status(201).json({ success: true, message: `Created ${jobs.length} recurring bookings`, recurrenceGroupId });
+        }
+
         const job = await (bookingQueue as any).add('create-booking', {
             spaceId: data.spaceId,
             userId: req.user!.id,

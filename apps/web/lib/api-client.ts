@@ -56,12 +56,20 @@ export async function apiClient<T>(
         ...fetchOptions,
         headers,
         credentials: 'include', // Include cookies for session
+        cache: 'no-store', // Ensure we always get fresh data
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+        data = text ? JSON.parse(text) : {};
+    } catch (err) {
+        console.error('API Response Parse Error:', text);
+        throw new Error('Server returned invalid response');
+    }
 
     if (!response.ok) {
-        throw new Error(data.error?.message || 'An error occurred');
+        throw new Error(data.error?.message || `Request failed with status ${response.status}`);
     }
 
     return data.data;
@@ -75,12 +83,12 @@ export const api = {
         apiClient<any>('/api/orgs', { method: 'POST', body: JSON.stringify(data), auth: true }),
     checkSlug: (slug: string) => apiClient<{ available: boolean }>(`/api/orgs/check-slug/${slug}`),
 
-    // Spaces (public)
-    getSpaces: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/spaces`),
+    // Spaces (authenticated)
+    getSpaces: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/spaces`, { auth: true }),
     getAvailability: (orgSlug: string, spaceId: string, date: string, timezone?: string) =>
-        apiClient<any>(`/api/orgs/${orgSlug}/spaces/${spaceId}/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`),
+        apiClient<any>(`/api/orgs/${orgSlug}/spaces/${spaceId}/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`, { auth: true }),
     getAllAvailability: (orgSlug: string, date: string, timezone?: string) =>
-        apiClient<any>(`/api/orgs/${orgSlug}/spaces/all/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`),
+        apiClient<any>(`/api/orgs/${orgSlug}/spaces/all/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`, { auth: true }),
 
     // Bookings (all authenticated)
     createBooking: (orgSlug: string, data: { spaceId: string; startTime: string; endTime: string; slotId?: string; slotIndex?: number }) =>
@@ -116,5 +124,9 @@ export const api = {
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/rules/bulk`, { method: 'POST', body: JSON.stringify(data), auth: true }),
     deleteSpace: (orgSlug: string, spaceId: string) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/${spaceId}`, { method: 'DELETE', auth: true }),
+
+    // Access Control
+    updateOrgSettings: (orgSlug: string, data: { allowedDomains?: string[]; allowedEmails?: string[] }) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/admin/settings`, { method: 'PATCH', body: JSON.stringify(data), auth: true }),
 };
 
