@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { API_URL } from '@/lib/config';
 
 interface SSEMessage {
-    type: 'CONNECTED' | 'SLOT_UPDATE' | 'BOOKING_CREATED' | 'BOOKING_CANCELLED';
+    type: 'CONNECTED' | 'SLOT_UPDATE' | 'BOOKING_CREATED' | 'BOOKING_CANCELLED' | 'SPACE_UPDATED';
     payload: {
         spaceId?: string;
         date?: string;

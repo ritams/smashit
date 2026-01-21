@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '@smashit/database';
 import { createSpaceSchema, updateSpaceSchema, updateBookingRulesSchema } from '@smashit/validators';
+import { broadcastBookingUpdate } from '../services/sse.service.js';
 import { orgMiddleware } from '../middleware/org.middleware.js';
 import { authMiddleware, adminMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
 
@@ -144,27 +145,56 @@ adminRoutes.patch('/spaces/:spaceId', async (req: AuthRequest, res, next) => {
             include: { rules: true, slots: true },
         });
 
-        // Handle capacity increase
-        if (data.capacity && data.capacity > (space as any).slots.length) {
-            const currentSlots = (space as any).slots || [];
-            const newSlotsCount = data.capacity - currentSlots.length;
-            const startNumber = currentSlots.length + 1;
+        // Handle capacity change
+        const currentSlots = (space as any).slots || [];
+        if (data.capacity && data.capacity !== currentSlots.length) {
+            if (data.capacity > currentSlots.length) {
+                // Increase: Add new slots
+                const newSlotsCount = data.capacity - currentSlots.length;
+                const startNumber = currentSlots.length + 1;
 
-            await prisma.slot.createMany({
-                data: Array.from({ length: newSlotsCount }, (_, i) => ({
-                    spaceId,
-                    number: startNumber + i,
-                    name: `Slot ${startNumber + i}`,
-                })),
-            });
+                await prisma.slot.createMany({
+                    data: Array.from({ length: newSlotsCount }, (_, i) => ({
+                        spaceId,
+                        number: startNumber + i,
+                        name: `Slot ${startNumber + i}`,
+                    })),
+                });
+            } else {
+                // Decrease: Delete extra slots
+                await prisma.slot.deleteMany({
+                    where: {
+                        spaceId,
+                        number: { gt: data.capacity },
+                    },
+                });
+            }
 
-            // Refetch to include new slots
+            // Refetch to include updated slots
             const updatedSpace = await prisma.space.findUnique({
                 where: { id: spaceId },
-                include: { rules: true, slots: true },
+                include: { rules: true, slots: { orderBy: { number: 'asc' } } },
             });
+            // Broadcast change
+            broadcastBookingUpdate(req.org!.id, {
+                type: 'SPACE_UPDATED',
+                payload: {
+                    spaceId,
+                    date: new Date().toISOString().split('T')[0], // Optional but helps some listeners
+                } as any
+            });
+
             return res.json({ success: true, data: updatedSpace });
         }
+
+        // Broadcast change even if capacity didn't change (e.g. name change)
+        broadcastBookingUpdate(req.org!.id, {
+            type: 'SPACE_UPDATED',
+            payload: {
+                spaceId,
+                date: new Date().toISOString().split('T')[0],
+            } as any
+        });
 
         res.json({ success: true, data: space });
     } catch (error) {
@@ -253,6 +283,15 @@ adminRoutes.delete('/spaces/:spaceId', async (req: AuthRequest, res, next) => {
         await prisma.space.update({
             where: { id: spaceId },
             data: { isActive: false },
+        });
+
+        // Broadcast deletion
+        broadcastBookingUpdate(req.org!.id, {
+            type: 'SPACE_UPDATED',
+            payload: {
+                spaceId,
+                date: new Date().toISOString().split('T')[0],
+            } as any
         });
 
         res.json({ success: true, data: { id: spaceId, isActive: false } });

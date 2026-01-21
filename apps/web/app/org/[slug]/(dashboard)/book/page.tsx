@@ -170,21 +170,22 @@ export default function BookPage() {
     const weekDates = Array.from({ length: 7 }, (_, i) => addDays(viewDate, i));
 
     // Fetch spaces
-    useEffect(() => {
-        async function fetchSpaces() {
-            try {
-                const data = await api.getSpaces(orgSlug);
-                setSpaces(data);
-                if (data.length > 0) {
-                    setSelectedSpace(data[0]);
-                }
-            } catch (err) {
-                console.error('Failed to fetch spaces:', err);
+    const fetchSpaces = useCallback(async () => {
+        try {
+            const data = await api.getSpaces(orgSlug);
+            setSpaces(data);
+            if (data.length > 0 && !selectedSpace) {
+                setSelectedSpace(data[0]);
             }
-            setLoadingSpaces(false);
+        } catch (err) {
+            console.error('Failed to fetch spaces:', err);
         }
+        setLoadingSpaces(false);
+    }, [orgSlug, selectedSpace]);
+
+    useEffect(() => {
         fetchSpaces();
-    }, [orgSlug]);
+    }, [fetchSpaces]);
 
     // Fetch time slots for selected space and date
     const fetchSlots = useCallback(async () => {
@@ -219,15 +220,18 @@ export default function BookPage() {
         }
     }, [fetchSlots, viewMode]);
 
-    // SSE for real-time updates - refetch when other users create/cancel bookings
+    // SSE for real-time updates - refetch when other users create/cancel bookings or admin updates space
     const handleSSEMessage = useCallback((msg: any) => {
-        if (msg.type === 'BOOKING_CREATED' || msg.type === 'BOOKING_CANCELLED') {
+        if (msg.type === 'BOOKING_CREATED' || msg.type === 'BOOKING_CANCELLED' || msg.type === 'SPACE_UPDATED') {
+            if (msg.type === 'SPACE_UPDATED') {
+                fetchSpaces();
+            }
             // Refresh all spaces view
             setAllSpacesRefreshKey(prev => prev + 1);
             // Refresh single space view
             fetchSlots();
         }
-    }, [fetchSlots]);
+    }, [fetchSlots, fetchSpaces]);
 
     useSSE({
         orgSlug,

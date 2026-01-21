@@ -135,21 +135,41 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger 
     return (
         <div className="flex flex-col h-full space-y-4">
             {/* Legend */}
-            <div className="flex items-center gap-4 px-4 py-2 bg-muted/30 rounded-lg border border-foreground/5 w-fit">
-                <div className="flex items-center gap-1.5 leading-none">
-                    <div className="w-3 h-3 rounded-sm border border-emerald-200 bg-emerald-50/50" />
+            <div className="flex flex-wrap items-center gap-4 px-4 py-2 bg-muted/20 rounded-lg border border-foreground/5 w-fit">
+                <div className="flex items-center gap-2 leading-none">
+                    <div className="w-6 h-4 rounded-sm border border-emerald-200 bg-emerald-50 relative overflow-hidden">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-[1px] bg-emerald-500/10" />
+                            <div className="h-full w-[1px] bg-emerald-500/10" />
+                        </div>
+                    </div>
                     <span className="text-xs font-medium text-muted-foreground">Available</span>
                 </div>
-                <div className="flex items-center gap-1.5 leading-none">
-                    <div className="w-3 h-3 rounded-sm border border-primary bg-primary/10" />
+                <div className="flex items-center gap-2 leading-none">
+                    <div className="w-6 h-4 rounded-sm border border-primary/20 bg-primary/5 relative overflow-hidden">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-[1px] bg-primary/20" />
+                            <div className="h-full w-[1px] bg-primary/20" />
+                        </div>
+                    </div>
                     <span className="text-xs font-medium text-muted-foreground">My Booking</span>
                 </div>
-                <div className="flex items-center gap-1.5 leading-none">
-                    <div className="w-3 h-3 rounded-sm border border-slate-200 bg-slate-100" />
+                <div className="flex items-center gap-2 leading-none">
+                    <div className="w-6 h-4 rounded-sm border border-slate-200 bg-slate-50 relative overflow-hidden grayscale">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-[1px] bg-black/[0.03]" />
+                            <div className="h-full w-[1px] bg-black/[0.03]" />
+                        </div>
+                    </div>
                     <span className="text-xs font-medium text-muted-foreground">Booked</span>
                 </div>
-                <div className="flex items-center gap-1.5 leading-none">
-                    <div className="w-3 h-3 rounded-sm border border-slate-200 bg-slate-200/40 opacity-60" />
+                <div className="flex items-center gap-2 leading-none">
+                    <div className="w-6 h-4 rounded-sm border border-slate-100 bg-slate-50/50 relative overflow-hidden opacity-40">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-[1px] bg-black/[0.02]" />
+                            <div className="h-full w-[1px] bg-black/[0.02]" />
+                        </div>
+                    </div>
                     <span className="text-xs font-medium text-muted-foreground">Disabled</span>
                 </div>
             </div>
@@ -157,17 +177,17 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger 
             <div className="border rounded-xl shadow-sm overflow-hidden flex flex-col h-full bg-card">
                 {/* Scrollable Table Container */}
                 <div className="flex-1 overflow-auto">
-                    <table className="w-full border-collapse">
+                    <table className="w-full border-collapse table-fixed">
                         {/* Sticky Header */}
                         <thead className="sticky top-0 z-20">
                             <tr className="bg-muted border-b-2 border-foreground/20">
-                                <th className="p-4 bg-muted text-left w-28 font-semibold text-foreground border-r-2 border-foreground/20">
+                                <th className="p-4 bg-muted text-left w-32 font-semibold text-foreground border-r-2 border-foreground/20">
                                     Time
                                 </th>
                                 {data.map((item) => (
-                                    <th key={item.space.id} className="p-4 bg-muted border-l-2 border-foreground/20 text-left min-w-[180px]">
-                                        <div className="font-semibold text-foreground">{item.space.name}</div>
-                                        <div className="text-xs font-normal text-muted-foreground mt-0.5">
+                                    <th key={item.space.id} className="p-4 bg-muted border-l-2 border-foreground/20 text-left w-[200px]">
+                                        <div className="font-semibold text-foreground truncate">{item.space.name}</div>
+                                        <div className="text-xs font-normal text-muted-foreground mt-0.5 whitespace-nowrap">
                                             Cap: {item.space.capacity}
                                         </div>
                                     </th>
@@ -184,7 +204,7 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger 
                                 return (
                                     <tr key={rowTime.toISOString()} className={cn("group hover:bg-muted/5", isCurrentHourRow && "bg-muted/10")}>
                                         <td className={cn(
-                                            "p-3 border-b-2 border-foreground/10 sticky left-0 z-10 border-r-2 border-foreground/20 w-24",
+                                            "p-3 border-b-2 border-foreground/10 sticky left-0 z-10 border-r-2 border-foreground/20 w-32",
                                             isCurrentHourRow
                                                 ? "bg-muted/10 font-bold"
                                                 : "bg-background group-hover:bg-muted/5 font-semibold"
@@ -265,36 +285,71 @@ export function AllSpacesView({ date, orgSlug, onBook, onCancel, refreshTrigger 
                                                                                     }
                                                                                 }}
                                                                                 className={cn(
-                                                                                    "h-12 rounded-lg border flex flex-col items-center justify-center p-1 text-[11px] transition-all duration-200 relative group overflow-hidden",
+                                                                                    "h-14 rounded-lg border flex flex-col items-center justify-center p-1 text-[11px] transition-all duration-300 relative group overflow-hidden",
                                                                                     booked
                                                                                         ? isMine
-                                                                                            ? "bg-primary/10 border-primary/50 text-foreground hover:bg-primary/20 cursor-pointer shadow-sm"
-                                                                                            : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                                                                            ? "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20 cursor-pointer"
+                                                                                            : "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
                                                                                         : isDisabled
-                                                                                            ? "opacity-30 cursor-not-allowed bg-slate-200/40 border-slate-200 grayscale"
-                                                                                            : "bg-emerald-50/50 border-emerald-200/50 text-emerald-700 hover:bg-emerald-100/50 hover:border-emerald-300 hover:shadow-sm"
+                                                                                            ? "opacity-30 cursor-not-allowed bg-slate-50/50 border-slate-100 grayscale-[0.5]"
+                                                                                            : "bg-emerald-50 border-emerald-200/40 text-emerald-700 hover:bg-emerald-100/60 hover:border-emerald-300/40"
                                                                                 )}
                                                                             >
-                                                                                {booked ? (
-                                                                                    <div className="flex items-center gap-1.5 w-full px-1">
-                                                                                        <Avatar className="h-5 w-5 border border-background flex-shrink-0 shadow-sm">
-                                                                                            {booked.userAvatar && <AvatarImage src={booked.userAvatar} />}
-                                                                                            <AvatarFallback className="text-[7px] bg-primary/5 font-bold">{getInitials(booked.userName)}</AvatarFallback>
-                                                                                        </Avatar>
-                                                                                        <span className="truncate text-left font-bold leading-tight flex-1">
-                                                                                            {booked.userName}
+                                                                                {/* Subtle Court Lines */}
+                                                                                <div className={cn(
+                                                                                    "absolute inset-0 pointer-events-none transition-opacity",
+                                                                                    booked ? "opacity-[0.05]" : "opacity-[0.15] group-hover:opacity-[0.25]"
+                                                                                )}>
+                                                                                    {/* Half Court Line */}
+                                                                                    <div className={cn(
+                                                                                        "absolute top-1/2 left-0 w-full h-[1px]",
+                                                                                        isMine ? "bg-primary" : booked ? "bg-black" : "bg-emerald-600"
+                                                                                    )} />
+                                                                                    {/* Center Line */}
+                                                                                    <div className={cn(
+                                                                                        "absolute top-0 left-1/2 w-[1px] h-full",
+                                                                                        isMine ? "bg-primary" : booked ? "bg-black" : "bg-emerald-600"
+                                                                                    )} />
+                                                                                    {/* Inner Rect (Service Lines) */}
+                                                                                    <div className={cn(
+                                                                                        "absolute inset-2 border-[1px]",
+                                                                                        isMine ? "border-primary" : booked ? "border-black" : "border-emerald-600"
+                                                                                    )} />
+                                                                                </div>
+
+                                                                                <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+                                                                                    {booked ? (
+                                                                                        <div className="flex items-center gap-1.5 w-full px-2">
+                                                                                            <Avatar className="h-6 w-6 border border-background shadow-sm flex-shrink-0">
+                                                                                                {booked.userAvatar && <AvatarImage src={booked.userAvatar} />}
+                                                                                                <AvatarFallback className={cn(
+                                                                                                    "text-[7px] font-bold",
+                                                                                                    isMine ? "bg-primary/10 text-primary" : "bg-muted"
+                                                                                                )}>
+                                                                                                    {getInitials(booked.userName)}
+                                                                                                </AvatarFallback>
+                                                                                            </Avatar>
+                                                                                            <span className={cn(
+                                                                                                "truncate text-left font-semibold leading-tight flex-1 text-[10px]",
+                                                                                                isMine ? "text-primary" : "text-muted-foreground"
+                                                                                            )}>
+                                                                                                {booked.userName}
+                                                                                            </span>
+                                                                                            {isMine && !isDisabled && (
+                                                                                                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-all bg-destructive/10 p-0.5 rounded text-destructive hover:bg-destructive hover:text-white">
+                                                                                                    <X className="w-2.5 h-2.5" />
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <span className={cn(
+                                                                                            "font-medium text-xs opacity-40 transition-opacity group-hover:opacity-60",
+                                                                                            isDisabled ? "text-slate-300" : "text-emerald-700"
+                                                                                        )}>
+                                                                                            {subSlot.name.replace('Slot ', '')}
                                                                                         </span>
-                                                                                        {isMine && !isDisabled && (
-                                                                                            <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive/10 p-0.5 rounded text-destructive hover:bg-destructive hover:text-white">
-                                                                                                <X className="w-2 h-2" />
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <span className="font-semibold opacity-60">
-                                                                                        {subSlot.name.replace('Slot ', '')}
-                                                                                    </span>
-                                                                                )}
+                                                                                    )}
+                                                                                </div>
                                                                             </button>
                                                                         </TooltipTrigger>
                                                                         <TooltipContent>

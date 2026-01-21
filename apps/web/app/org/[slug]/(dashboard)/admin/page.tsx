@@ -471,15 +471,15 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Capacity (Increase Only)</Label>
+                                        <Label>Capacity</Label>
                                         <Input
                                             type="number"
                                             defaultValue={editingSpace.capacity}
                                             onChange={(e) => setEditingSpace({ ...editingSpace, capacity: parseInt(e.target.value) || editingSpace.capacity })}
-                                            min={editingSpace.capacity}
+                                            min={1}
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            Warning: Increasing capacity adds new slots. Decreasing is not currently supported through this UI.
+                                            Note: Changing capacity will automatically add or remove slots.
                                         </p>
                                     </div>
                                     <div className="flex justify-end pt-4">
