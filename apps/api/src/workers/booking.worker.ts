@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { prisma } from '@avith/database';
+import { prisma, Prisma } from '@avith/database';
 import { redis, createLogger } from '../lib/core.js';
 import { BookingJobData } from '../lib/queue.js';
 import { startOfDay, addDays, isAfter, endOfDay } from 'date-fns';
@@ -130,7 +130,6 @@ export const processBooking = async (job: Job<BookingJobData>) => {
         }
     }
 
-    import { Prisma } from '@prisma/client';
 
     // Use transaction for atomicity
     const booking = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
