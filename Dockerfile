@@ -50,8 +50,6 @@ ENV APP_NAME=${APP_NAME}
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-USER nextjs
-
 # Selective copying based on APP_NAME using a bind mount
 RUN --mount=type=bind,from=builder,source=/app,target=/builder \
     if [ "$APP_NAME" = "@avith/web" ]; then \
@@ -68,6 +66,8 @@ RUN --mount=type=bind,from=builder,source=/app,target=/builder \
         cp -r /builder/packages/database ./packages/database; \
     fi && \
     chown -R nextjs:nodejs .
+
+USER nextjs
 
 EXPOSE 3000
 EXPOSE 4000
