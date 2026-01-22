@@ -118,11 +118,11 @@ export default function LandingPage() {
                 <div className="container max-w-6xl relative z-10 pt-32 pb-24">
                     <div className="max-w-4xl space-y-10">
                         <h1 className="font-display text-6xl md:text-7xl lg:text-8xl font-medium tracking-tight leading-[0.95] text-balance">
-                            Bespoke reservation infrastructure
+                            Bespoke reservation ecosystem
                         </h1>
 
-                        <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl font-light">
-                            Elevated scheduling systems for private clubs and exclusive communities who demand excellence.
+                        <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl font-light text-balance">
+                            The definitive sports booking infrastructure for private clubs and exclusive communities who demand excellence.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-start gap-4 pt-4">
@@ -137,7 +137,7 @@ export default function LandingPage() {
                                 <>
                                     <Link href="/contact">
                                         <Button size="lg" className="h-14 px-12 text-base transition-transform hover:scale-[1.02] active:scale-[0.98]">
-                                            Partner With Us
+                                            Request Access
                                             <ArrowRight className="ml-2 h-4 w-4" />
                                         </Button>
                                     </Link>
@@ -170,9 +170,9 @@ export default function LandingPage() {
                         <div className="py-12 md:py-0 md:pr-16 space-y-6">
                             <span className="font-display text-5xl font-light text-primary/10">01</span>
                             <div className="space-y-3">
-                                <h3 className="text-xl font-medium">Seamless facility management</h3>
+                                <h3 className="text-xl font-medium">Bespoke portfolio orchestration</h3>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    From tennis courts to cricket grounds, manage your entire athletic portfolio with precision and ease.
+                                    The definitive standard for orchestrating elite athletic facilities, from private tennis courts to championship cricket grounds.
                                 </p>
                             </div>
                         </div>
@@ -181,9 +181,9 @@ export default function LandingPage() {
                         <div className="py-12 md:py-0 md:px-16 space-y-6 border-t md:border-t-0 border-border">
                             <span className="font-display text-5xl font-light text-primary/10">02</span>
                             <div className="space-y-3">
-                                <h3 className="text-xl font-medium">Total member visibility</h3>
+                                <h3 className="text-xl font-medium">Member sovereignty</h3>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    Real-time availability and coordination for exclusive communities who value their members&apos; time.
+                                    Seamless coordination and absolute visibility, engineered for communities where time is the ultimate luxury.
                                 </p>
                             </div>
                         </div>
@@ -192,9 +192,9 @@ export default function LandingPage() {
                         <div className="py-12 md:py-0 md:pl-16 space-y-6 border-t md:border-t-0 border-border">
                             <span className="font-display text-5xl font-light text-primary/10">03</span>
                             <div className="space-y-3">
-                                <h3 className="text-xl font-medium">Bespoke configurations</h3>
+                                <h3 className="text-xl font-medium">Architectural customization</h3>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    Custom rules, tailored branding, and granular control designed for the world&apos;s most prestigious estates.
+                                    Bespoke branding and granular control, engineered for the distinct requirements of global prestige estates.
                                 </p>
                             </div>
                         </div>
@@ -254,10 +254,10 @@ export default function LandingPage() {
                 <div className="container max-w-6xl">
                     <div className="max-w-xl mx-auto text-center space-y-6">
                         <h2 className="font-display text-3xl font-medium tracking-tight">
-                            Ready to elevate your community?
+                            Defining the future of your community
                         </h2>
                         <p className="text-muted-foreground">
-                            Get in touch to discuss how Avith can serve your members.
+                            Inquire within to discuss how Avith can uphold the standards of your exclusive organization.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                             <Link href="/contact">
