@@ -52,26 +52,22 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 USER nextjs
 
-# Conditional copying based on app type
-# This is a bit tricky in one Dockerfile runner stage, 
-# so we use a simple script or just copy everything needed for both.
-# Alternatively, we can use different stages for runner if needed.
-# For now, let's assume we build separate images.
-
-# ... (previous stages same)
-# NEXT.JS STANDALONE (Web)
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./web-standalone
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./web-standalone/apps/web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./web-standalone/apps/web/public
-
-# API (Express)
-# We need node_modules for the API. We can copy them from the builder stage.
-# In a monorepo, they are usually in the root or the app's node_modules.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/apps/api/dist ./apps/api/dist
-COPY --from=builder --chown=nextjs:nodejs /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder --chown=nextjs:nodejs /app/packages/database ./packages/database
+# Selective copying based on APP_NAME using a bind mount
+RUN --mount=type=bind,from=builder,source=/app,target=/builder \
+    if [ "$APP_NAME" = "@avith/web" ]; then \
+        cp -r /builder/apps/web/.next/standalone ./web-standalone && \
+        cp -r /builder/apps/web/.next/static ./web-standalone/apps/web/.next/static && \
+        if [ -d "/builder/apps/web/public" ]; then \
+            cp -r /builder/apps/web/public ./web-standalone/apps/web/public; \
+        fi; \
+    else \
+        cp -r /builder/node_modules ./node_modules && \
+        cp -r /builder/apps/api/node_modules ./apps/api/node_modules && \
+        cp -r /builder/apps/api/dist ./apps/api/dist && \
+        cp -r /builder/apps/api/package.json ./apps/api/package.json && \
+        cp -r /builder/packages/database ./packages/database; \
+    fi && \
+    chown -R nextjs:nodejs .
 
 EXPOSE 3000
 EXPOSE 4000
