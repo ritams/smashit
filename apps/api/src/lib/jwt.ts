@@ -25,6 +25,9 @@ async function getDerivedEncryptionKey(secret: string): Promise<Uint8Array> {
     );
 }
 
+// Cache the encryption key to avoid re-deriving on every request (expensive HKDF)
+let cachedEncryptionKey: Uint8Array | null = null;
+
 /**
  * Verify next-auth JWT token and extract user info
  * NextAuth v4 encrypts tokens using JWE with A256CBC-HS512
@@ -38,8 +41,12 @@ export async function verifySessionToken(token: string): Promise<JWTUser | null>
     }
 
     try {
-        const encryptionKey = await getDerivedEncryptionKey(secret);
-        const { payload } = await jwtDecrypt(token, encryptionKey, {
+        // Use cached key if available, otherwise derive and cache
+        if (!cachedEncryptionKey) {
+            cachedEncryptionKey = await getDerivedEncryptionKey(secret);
+        }
+
+        const { payload } = await jwtDecrypt(token, cachedEncryptionKey, {
             clockTolerance: 15, // 15 seconds tolerance
         });
 
