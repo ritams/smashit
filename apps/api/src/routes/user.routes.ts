@@ -73,7 +73,7 @@ userRoutes.get('/me/orgs', async (req: AuthenticatedRequest, res: Response, next
             return res.json({ success: true, data: [] });
         }
 
-        const orgs = user.memberships.map((m) => ({
+        const orgs = user.memberships.map((m: any) => ({
             id: m.org.id,
             name: m.org.name,
             slug: m.org.slug,
@@ -117,7 +117,7 @@ userRoutes.get('/me', async (req: AuthenticatedRequest, res: Response, next: Nex
 
         const profile = {
             ...user,
-            organizations: user.memberships.map((m) => ({
+            organizations: user.memberships.map((m: any) => ({
                 id: m.org.id,
                 name: m.org.name,
                 slug: m.org.slug,

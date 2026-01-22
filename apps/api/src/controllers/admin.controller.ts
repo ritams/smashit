@@ -87,7 +87,7 @@ export async function getMembers(req: AuthRequest, res: Response, next: NextFunc
             orderBy: { createdAt: 'desc' },
         });
 
-        const members = memberships.map(m => ({
+        const members = memberships.map((m: any) => ({
             id: m.user.id,
             email: m.user.email,
             name: m.user.name,

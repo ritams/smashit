@@ -48,7 +48,7 @@ spaceRoutes.get('/all/availability', async (req: OrgRequest, res, next) => {
             },
         });
 
-        const availabilityPromises = spaces.map(async space => {
+        const availabilityPromises = spaces.map(async (space: any) => {
             try {
                 return await getDetailedSpaceAvailability({
                     spaceId: space.id,

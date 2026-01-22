@@ -95,7 +95,7 @@ export async function getDetailedSpaceAvailability(params: AvailabilityParams) {
         const slotEnd = new Date(currentTime + slotDurationMs);
 
         const overlappingBookings = bookings.filter(
-            (b) => b.startTime < slotEnd && b.endTime > slotStart
+            (b: any) => b.startTime < slotEnd && b.endTime > slotStart
         );
 
         if (overlappingBookings.length > 0) {

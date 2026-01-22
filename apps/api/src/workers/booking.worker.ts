@@ -74,7 +74,7 @@ export const processBooking = async (job: Job<BookingJobData>) => {
                 },
                 select: { id: true }
             });
-            const sameTypeSpaceIds = sameTypeSpaces.map(s => s.id);
+            const sameTypeSpaceIds = sameTypeSpaces.map((s: any) => s.id);
 
             // Count user's bookings across ALL spaces of this type
             const userBookingsToday = await prisma.booking.count({

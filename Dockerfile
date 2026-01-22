@@ -1,83 +1,50 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine AS builder
 
-# 1. Prune step
-FROM base AS pruner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-RUN npm install turbo --global
+
+# Enable pnpm
+RUN corepack enable
+
+# Copy only the files needed for installation first for caching
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+COPY packages/database/package.json ./packages/database/
+COPY packages/types/package.json ./packages/types/
+COPY packages/validators/package.json ./packages/validators/
+
+# Install dependencies (all of them since we are in a monolith-like context now)
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the source
 COPY . .
-# We prune for both apps or pass it as an argument later
-# For simplicity in local build, we'll prune based on a build arg
-ARG APP_NAME
-RUN turbo prune ${APP_NAME} --docker
 
-# 2. Installer step
-FROM base AS installer
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
-
-COPY .gitignore .gitignore
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-
-RUN corepack enable
-RUN pnpm install
-
-# 3. Builder step
-FROM base AS builder
-WORKDIR /app
-RUN apk add --no-cache libc6-compat
-RUN corepack enable
-
-COPY --from=installer /app/ .
-COPY --from=pruner /app/out/full/ .
-COPY turbo.json turbo.json
-COPY tsconfig.base.json tsconfig.base.json
-
-# Generate Prisma Client
+# Generate Prisma client
 RUN pnpm turbo db:generate
 
-# Build the project
+# Build the apps
 ARG APP_NAME
 RUN pnpm turbo build --filter=${APP_NAME}...
 
-# 4. Runner step
-FROM base AS runner
+# RUNNER STAGE
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-# Selective copying based on APP_NAME using a bind mount
-RUN --mount=type=bind,from=builder,source=/app,target=/builder \
-    if [ "$APP_NAME" = "@avith/web" ]; then \
-        mkdir -p web-standalone && \
-        cp -r /builder/apps/web/.next/standalone/. ./web-standalone/ && \
-        mkdir -p web-standalone/apps/web/.next && \
-        cp -r /builder/apps/web/.next/static ./web-standalone/apps/web/.next/static && \
-        if [ -d "/builder/apps/web/public" ]; then \
-            cp -r /builder/apps/web/public ./web-standalone/apps/web/public; \
-        fi; \
-    else \
-        mkdir -p apps/api packages && \
-        cp -r /builder/node_modules ./node_modules && \
-        cp -r /builder/apps/api/node_modules ./apps/api/node_modules && \
-        cp -r /builder/apps/api/dist ./apps/api/dist && \
-        cp -r /builder/apps/api/package.json ./apps/api/package.json && \
-        cp -r /builder/packages ./; \
-    fi && \
-    chown -R nextjs:nodejs .
-
-USER nextjs
+# Copy build artifacts and dependencies
+# For Next.js (web), we use the standalone output if possible, 
+# but for a generic build-on-server, we can just copy what we need.
+COPY --from=builder /app ./
 
 EXPOSE 3000
 EXPOSE 4000
 
-# Start command depends on APP_NAME
+# Start script
 CMD if [ "$APP_NAME" = "@avith/web" ]; then \
-      node web-standalone/apps/web/server.js; \
+      pnpm --filter=@avith/web start; \
     else \
-      node apps/api/dist/index.js; \
+      pnpm --filter=@avith/api start; \
     fi
