@@ -10,6 +10,9 @@ const nextConfig = {
             },
         ],
     },
+    experimental: {
+        optimizePackageImports: ['lucide-react', 'date-fns', '@radix-ui/react-icons', 'lodash'],
+    },
 };
 
 module.exports = nextConfig;

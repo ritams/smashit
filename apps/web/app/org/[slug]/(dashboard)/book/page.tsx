@@ -197,7 +197,6 @@ export default function BookPage() {
             } catch (ignore) { }
 
         } catch (err: any) {
-            console.error('Failed to fetch spaces:', err);
             // Check for access denied error from backend
             if (err.message && (
                 err.message.includes('Access denied') ||
@@ -208,6 +207,8 @@ export default function BookPage() {
                 router.replace(`/org/${orgSlug}/access-denied`);
                 return;
             }
+
+            console.error('Failed to fetch spaces:', err);
         }
         setLoadingSpaces(false);
     }, [orgSlug, selectedSpace]);

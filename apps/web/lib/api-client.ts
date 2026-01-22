@@ -6,27 +6,73 @@ interface FetchOptions extends RequestInit {
 }
 
 /**
+ * Token management
+ * We cache the token in memory to avoid fetching it before every single request.
+ * This turns a 3-round-trip operation into a 1-round-trip operation for most requests.
+ */
+let cachedToken: string | null = null;
+let tokenExpiry: number = 0;
+const TOKEN_REFRESH_BUFFER = 60 * 1000; // Refresh 1 minute before expiry (approximate)
+
+/**
  * Get session token for authenticated requests
- * This fetches from the next-auth session endpoint
+ * Uses memory cache first, then fetches from the next-auth session endpoint
  */
 async function getSessionToken(): Promise<string | null> {
+    // Return cached token if valid
+    const now = Date.now();
+    if (cachedToken && now < tokenExpiry) {
+        return cachedToken;
+    }
+
     try {
+        // Double-check session existence first (fastest check usually)
+        // Note: we could skip this and go straight to token if we trust 401 handling,
+        // but this checks if the next-auth session layer considers us logged in.
         const res = await fetch('/api/auth/session');
-        if (!res.ok) return null;
+        if (!res.ok) {
+            cachedToken = null;
+            return null;
+        }
 
         const session = await res.json();
-        if (!session?.user?.email) return null;
+        if (!session?.user?.email) {
+            cachedToken = null;
+            return null;
+        }
 
         // Get the JWT token from cookies (next-auth stores it securely)
-        // We need to fetch from a special endpoint that returns the raw token
         const tokenRes = await fetch('/api/auth/token');
-        if (!tokenRes.ok) return null;
+        if (!tokenRes.ok) {
+            cachedToken = null;
+            return null;
+        }
 
         const { token } = await tokenRes.json();
-        return token || null;
+
+        if (token) {
+            cachedToken = token;
+            // Set simplistic expiry - 5 minutes or until 401
+            // We don't parse the JWT here to save bundle size/complexity, 
+            // we just assume it's good for a bit.
+            tokenExpiry = now + (5 * 60 * 1000);
+            return token;
+        }
+
+        return null;
     } catch {
+        cachedToken = null;
         return null;
     }
+}
+
+/**
+ * Clear the cached token
+ * Call this on logout or 401
+ */
+export function clearTokenCache() {
+    cachedToken = null;
+    tokenExpiry = 0;
 }
 
 /**
@@ -56,8 +102,14 @@ export async function apiClient<T>(
         ...fetchOptions,
         headers,
         credentials: 'include', // Include cookies for session
-        cache: 'no-store', // Ensure we always get fresh data
+        // Removed default 'no-store' to allow Next.js caching where appropriate
+        // Pass cache: 'no-store' explicitly in options if you need fresh data
     });
+
+    // Handle unauthorized - clear cache so next request tries to refresh
+    if (response.status === 401) {
+        clearTokenCache();
+    }
 
     const text = await response.text();
     let data;
