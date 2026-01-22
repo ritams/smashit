@@ -44,10 +44,16 @@ export default function CreateOrgPage() {
             setCheckingSlug(true);
             try {
                 const res = await fetch(`${API_URL}/api/orgs/check-slug/${slug}`);
+                if (!res.ok) {
+                    throw new Error(`Server error: ${res.status}`);
+                }
                 const data = await res.json();
                 setSlugAvailable(data.data?.available ?? false);
-            } catch (err) {
+                setError('');
+            } catch (err: any) {
+                console.error('Slug check failed:', err);
                 setSlugAvailable(null);
+                setError(`Failed to check availability: ${err.message || 'Network error'}`);
             }
             setCheckingSlug(false);
         }, 500);
@@ -251,10 +257,10 @@ export default function CreateOrgPage() {
                                 {slug.length >= 2 && !checkingSlug && (
                                     <p
                                         className={`text-xs ${slugAvailable
-                                                ? 'text-success'
-                                                : slugAvailable === false
-                                                    ? 'text-destructive'
-                                                    : 'text-muted-foreground'
+                                            ? 'text-success'
+                                            : slugAvailable === false
+                                                ? 'text-destructive'
+                                                : 'text-muted-foreground'
                                             }`}
                                     >
                                         {slugAvailable

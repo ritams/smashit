@@ -7,10 +7,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXTAUTH_URL=http://<YOUR_SERVER_IP>:3000
-      - NEXT_PUBLIC_API_URL=http://<YOUR_SERVER_IP>:4000
-      - AUTH_SECRET=your_auth_secret_here
-      # Add other next-auth env vars if needed
+      - NEXTAUTH_URL
+      - NEXT_PUBLIC_API_URL
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - AUTH_SECRET
     depends_on:
       - api
 
@@ -23,8 +24,8 @@ services:
       - PORT=4000
       - DATABASE_URL=postgresql://avith:avith_password@postgres:5432/avith?schema=public
       - REDIS_URL=redis://redis:6379
-      - CORS_ORIGIN=http://<YOUR_SERVER_IP>:3000
-      - JWT_SECRET=your_jwt_secret_here
+      - CORS_ORIGIN
+      - AUTH_SECRET
     depends_on:
       postgres:
         condition: service_healthy
