@@ -84,6 +84,19 @@ export default function DashboardLayout({
                             >
                                 My Bookings
                             </Link>
+                            {isAdmin && (
+                                <Link
+                                    href={`/org/${orgSlug}/admin`}
+                                    className={cn(
+                                        "text-[13px] font-medium transition-colors px-1 py-1",
+                                        pathname?.includes('/admin')
+                                            ? "text-primary"
+                                            : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    Admin
+                                </Link>
+                            )}
                         </nav>
                     </div>
 
@@ -142,7 +155,7 @@ export default function DashboardLayout({
             {/* Main Content */}
             <main className="container py-6 pb-24 md:pb-6">{children}</main>
 
-            <MobileNav />
+            <MobileNav isAdmin={isAdmin} />
         </div>
     );
 }

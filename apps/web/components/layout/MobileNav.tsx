@@ -2,10 +2,10 @@
 
 import { usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Grid, Ticket, User } from 'lucide-react';
+import { Grid, Ticket, User, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function MobileNav() {
+export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
     const pathname = usePathname();
     const params = useParams();
     const orgSlug = params.slug as string;
@@ -27,9 +27,18 @@ export function MobileNav() {
             href: `/org/${orgSlug}/profile`,
             label: 'Account',
             icon: User,
-            isActive: (path: string) => path.includes('/profile') || path.includes('/admin')
+            isActive: (path: string) => path.includes('/profile')
         }
     ];
+
+    if (isAdmin) {
+        navItems.splice(2, 0, {
+            href: `/org/${orgSlug}/admin`,
+            label: 'Admin',
+            icon: Shield,
+            isActive: (path: string) => path.includes('/admin')
+        });
+    }
 
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
