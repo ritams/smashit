@@ -188,6 +188,9 @@ importers:
         specifier: ^6.2.1
         version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.19.7
       prisma:
         specifier: ^6.2.1
         version: 6.19.2(typescript@5.9.3)
@@ -200,6 +203,9 @@ importers:
 
   packages/types:
     devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.19.7
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
@@ -210,6 +216,9 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.19.7
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
