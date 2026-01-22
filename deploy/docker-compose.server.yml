@@ -10,6 +10,8 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    env_file:
+      - ../.env
     environment:
       # You can override these in .env on the server
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
@@ -32,6 +34,8 @@ services:
     restart: always
     ports:
       - "4000:4000"
+    env_file:
+      - ../.env
     environment:
       - PORT=4000
       - DATABASE_URL=postgresql://avith:avith_password@postgres:5432/avith?schema=public

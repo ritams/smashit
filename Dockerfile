@@ -45,7 +45,7 @@ EXPOSE 4000
 
 # Start script
 CMD if [ "$APP_NAME" = "@avith/web" ]; then \
-      node apps/web/server.js || pnpm --filter=@avith/web start; \
+      pnpm --filter=@avith/web start; \
     else \
-      node apps/api/dist/index.js; \
+      pnpm --filter=@avith/api start; \
     fi
