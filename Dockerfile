@@ -31,12 +31,13 @@ RUN pnpm turbo build --filter=${APP_NAME}...
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Enable pnpm in runner
+RUN corepack enable
+
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
 
 # Copy build artifacts and dependencies
-# For Next.js (web), we use the standalone output if possible, 
-# but for a generic build-on-server, we can just copy what we need.
 COPY --from=builder /app ./
 
 EXPOSE 3000
@@ -44,7 +45,7 @@ EXPOSE 4000
 
 # Start script
 CMD if [ "$APP_NAME" = "@avith/web" ]; then \
-      pnpm --filter=@avith/web start; \
+      node apps/web/server.js || pnpm --filter=@avith/web start; \
     else \
-      pnpm --filter=@avith/api start; \
+      node apps/api/dist/index.js; \
     fi
