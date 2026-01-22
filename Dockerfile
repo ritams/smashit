@@ -1,4 +1,4 @@
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # 1. Prune step
 FROM base AS pruner
@@ -32,6 +32,7 @@ RUN corepack enable
 COPY --from=installer /app/ .
 COPY --from=pruner /app/out/full/ .
 COPY turbo.json turbo.json
+COPY tsconfig.base.json tsconfig.base.json
 
 # Generate Prisma Client
 RUN pnpm turbo db:generate
