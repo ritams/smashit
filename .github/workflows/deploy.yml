@@ -20,11 +20,11 @@ jobs:
         include:
           - app: web
             dockerfile: Dockerfile
-            build-arg: APP_NAME=@avith/web
+            build-arg: "@avith/web"
             image-name: avith-web
           - app: api
             dockerfile: Dockerfile
-            build-arg: APP_NAME=@avith/api
+            build-arg: "@avith/api"
             image-name: avith-api
 
     steps:
