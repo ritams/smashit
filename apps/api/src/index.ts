@@ -20,8 +20,26 @@ const PORT = process.env.PORT || 4000;
 validateEnv();
 
 // Middleware
+// Middleware
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',').map(o => o.trim());
+log.info('Configured CORS Origins', { origins: allowedOrigins });
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            log.warn('CORS Blocked Request', {
+                origin,
+                allowedOrigins,
+                method: 'UNKNOWN' // Method isn't available in this callback easily without closure
+            });
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 app.use(express.json());
