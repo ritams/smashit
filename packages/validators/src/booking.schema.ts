@@ -11,6 +11,7 @@ export const createBookingSchema = z.object({
                 email: z.string().email().optional(),
             })
         )
+        .max(50)
         .optional()
         .default([]),
     notes: z.string().max(500).optional(),

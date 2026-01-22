@@ -22,19 +22,7 @@ async function jwtAuth(req: AuthenticatedRequest, res: Response, next: NextFunct
     const token = extractBearerToken(req.headers.authorization);
 
     if (!token) {
-        // Fallback for dev mode
-        if (process.env.ALLOW_HEADER_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
-            const email = req.headers['x-user-email'] as string;
-            if (email) {
-                const user = await prisma.user.findUnique({ where: { email } });
-                if (user) {
-                    req.userId = user.id;
-                    req.userEmail = user.email;
-                    log.warn('Using header auth fallback', { email });
-                    return next();
-                }
-            }
-        }
+        log.warn('No token provided', { path: req.path });
         return res.status(401).json({
             success: false,
             error: { code: 'UNAUTHORIZED', message: 'Valid token required' },

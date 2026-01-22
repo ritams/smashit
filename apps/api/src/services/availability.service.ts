@@ -19,6 +19,16 @@ interface BookingWithUser {
     endTime: Date;
 }
 
+/**
+ * Get detailed time slot availability for a space on a specific date
+ * 
+ * @param params - Availability query parameters
+ * @param params.spaceId - The space to check availability for
+ * @param params.date - Date in YYYY-MM-DD format
+ * @param params.orgTimezone - Organization's timezone (defaults to UTC)
+ * @returns Space details with time slots and their booking status
+ * @throws Error if space not found or rules missing
+ */
 export async function getDetailedSpaceAvailability(params: AvailabilityParams) {
     const { spaceId, date, orgTimezone } = params;
 

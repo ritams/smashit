@@ -21,10 +21,13 @@ export interface AuthRequest extends OrgRequest {
 }
 
 /**
- * Pure Auth Middleware
- * Verifies the user is authenticated (via JWT).
- * Populates req.user.
- * DOES NOT check org membership.
+ * Authentication middleware - verifies JWT token
+ * 
+ * Extracts Bearer token from Authorization header, validates it,
+ * and populates req.user with the authenticated user's info.
+ * Does NOT check organization membership.
+ * 
+ * @throws 401 if no token provided or token is invalid
  */
 export async function authMiddleware(
     req: AuthRequest,
@@ -32,15 +35,18 @@ export async function authMiddleware(
     next: NextFunction
 ) {
     try {
+        const correlationId = (req as any).correlationId;
         const authHeader = req.headers.authorization;
         const token = extractBearerToken(authHeader);
 
         if (!token) {
+            log.debug('No token provided', { path: req.path, correlationId });
             throw createError('Authentication required', 401, 'UNAUTHORIZED');
         }
 
         const jwtUser = await verifySessionToken(token);
         if (!jwtUser) {
+            log.warn('Invalid token', { path: req.path, correlationId });
             throw createError('Invalid token', 401, 'INVALID_TOKEN');
         }
 
@@ -58,7 +64,7 @@ export async function authMiddleware(
             name: user.name,
         };
 
-        log.debug('Authenticated via JWT', { email: user.email });
+        log.debug('Authenticated', { userId: user.id, email: user.email, correlationId });
         next();
     } catch (error) {
         next(error);
@@ -66,9 +72,18 @@ export async function authMiddleware(
 }
 
 /**
- * Org Access Middleware
- * Checks if the authenticated user has access to the organization for the current route.
- * Assumes authMiddleware has run and req.org is populated.
+ * Organization access middleware - checks user authorization
+ * 
+ * Verifies the authenticated user has access to the organization based on:
+ * 1. Allowed email domains
+ * 2. Allowed email addresses
+ * 3. Admin role (bypasses restrictions)
+ * 
+ * Creates membership if user is allowed but not yet a member.
+ * 
+ * @throws 401 if user not authenticated
+ * @throws 403 if user's email not on allowlist
+ * @throws 500 if organization context missing
  */
 export async function ensureOrgAccess(
     req: AuthRequest,

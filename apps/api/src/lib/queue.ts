@@ -1,5 +1,5 @@
 import { Queue, QueueEvents } from 'bullmq';
-import { redis } from './redis.js';
+import { redis } from './core.js';
 
 export interface BookingJobData {
     spaceId: string;

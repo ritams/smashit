@@ -1,10 +1,9 @@
 import { Worker, Job } from 'bullmq';
 import { prisma } from '@smashit/database';
-import { redis } from '../lib/redis.js';
+import { redis, createLogger } from '../lib/core.js';
 import { BookingJobData } from '../lib/queue.js';
 import { startOfDay, addDays, isAfter, endOfDay } from 'date-fns';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
-import { createLogger } from '../lib/core.js';
 
 const log = createLogger('BookingWorker');
 
@@ -221,17 +220,21 @@ export const processBooking = async (job: Job<BookingJobData>) => {
 let worker: Worker | null = null;
 
 export async function startBookingWorker() {
+    const concurrency = parseInt(process.env.WORKER_CONCURRENCY || '5', 10);
+
     worker = new Worker<BookingJobData>('bookings', processBooking, {
         connection: redis as any, // Cast to bypass ioredis version mismatch
-        concurrency: 5,
+        concurrency,
     });
 
+    log.info('Booking worker starting', { concurrency });
+
     worker.on('completed', (job) => {
-        log.info('Booking completed', { jobId: job.id });
+        log.info('Booking job completed', { jobId: job.id, name: job.name });
     });
 
     worker.on('failed', (job, err) => {
-        log.error('Booking failed', { jobId: job?.id, error: err.message });
+        log.error('Booking job failed', { jobId: job?.id, error: err.message, name: job?.name });
     });
 
     return worker;

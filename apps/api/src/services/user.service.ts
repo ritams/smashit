@@ -23,11 +23,11 @@ export async function findOrCreateUser(data: UserData) {
             data: {
                 email: data.email,
                 name: data.name || data.email.split('@')[0],
-                googleId: data.googleId || `google-${Date.now()}`,
+                googleId: data.googleId || crypto.randomUUID(),
                 avatarUrl: data.avatarUrl || null,
             },
         });
-        log.info('Created new user', { email: data.email });
+        log.info('Created new user', { email: data.email, id: user.id });
     }
 
     return user;

@@ -1,64 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
-import { format, isBefore, startOfDay, addHours, isSameDay, isAfter, endOfDay, addDays } from 'date-fns';
+'use client';
+
+import { useMemo } from 'react';
+import { startOfDay, addHours, isSameDay, isBefore } from 'date-fns';
 import { useSession } from 'next-auth/react';
-import { AlertCircle, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { cn, getInitials } from '@/lib/utils';
-import { api } from '@/lib/api-client';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { BookingGrid } from './BookingGrid';
+import { MobileBookingView } from './MobileBookingView';
+import { useSpaceAvailability } from './hooks/useSpaceAvailability';
+import type { AllSpacesViewProps, ColumnDef, SpaceAvailability } from './types/booking.types';
 
-interface AllSpacesViewProps {
-    date: Date;
-    orgSlug: string;
-    onBook: (val: any) => void;
-    onCancel: (val: any) => void;
-    refreshTrigger?: number;
-    spaceType?: string;
-    categoryName?: string;
-    viewMode?: 'ALL' | 'SINGLE';
-    mobileSelectedSpaceId?: string;
-}
-
-interface Booking {
-    id: string;
-    userId: string;
-    userEmail: string;
-    userName: string;
-    userAvatar?: string;
-    startTime: string;
-    endTime: string;
-    slotId?: string;
-    slotIndex?: number;
-}
-
-interface Slot {
-    startTime: string;
-    endTime: string;
-    isAvailable: boolean;
-    bookings?: Booking[];
-}
-
-interface SpaceAvailability {
-    space: {
-        id: string;
-        name: string;
-        type: string;
-        capacity: number;
-        slots: any[];
-        rules?: {
-            maxAdvanceDays: number;
-        };
-    };
-    slots: Slot[];
-}
-
+/**
+ * Main booking view component - orchestrates grid and mobile views
+ * Handles data fetching, filtering, and time row generation
+ */
 export function AllSpacesView({
     date,
     orgSlug,
@@ -71,41 +26,71 @@ export function AllSpacesView({
     mobileSelectedSpaceId
 }: AllSpacesViewProps) {
     const { data: session } = useSession();
-    const [data, setData] = useState<SpaceAvailability[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data, loading } = useSpaceAvailability(orgSlug, date, refreshTrigger);
 
     // Filter data by space type if provided
-    let filteredData = spaceType
-        ? data.filter(d => d.space.type === spaceType)
-        : data;
+    const filteredData = useMemo(() => {
+        let result = spaceType ? data.filter(d => d.space.type === spaceType) : data;
 
-    // Filter for Single View Mode
-    if (viewMode === 'SINGLE' && mobileSelectedSpaceId) {
-        filteredData = filteredData.filter(d => d.space.id === mobileSelectedSpaceId);
-    }
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const dateStr = format(date, 'yyyy-MM-dd');
-            const res = await api.getAllAvailability(orgSlug, dateStr);
-            setData(res);
-        } catch (error) {
-            console.error(error);
-            toast.error('Failed to load spaces');
-        } finally {
-            setLoading(false);
+        // Filter for Single View Mode
+        if (viewMode === 'SINGLE' && mobileSelectedSpaceId) {
+            result = result.filter(d => d.space.id === mobileSelectedSpaceId);
         }
-    }, [orgSlug, date]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData, refreshTrigger]);
+        return result;
+    }, [data, spaceType, viewMode, mobileSelectedSpaceId]);
 
+    // Generate time rows
+    const timeRows = useMemo(() => {
+        const now = new Date();
+        const rows: Date[] = [];
+        const baseDate = startOfDay(date);
+        const isToday = isSameDay(date, now);
+        const openingHour = 6;
+        const endHour = 22;
+        const startHour = isToday ? Math.max(now.getHours(), openingHour) : openingHour;
 
+        for (let h = startHour; h < endHour; h++) {
+            const rowTime = addHours(baseDate, h);
+            if (!isToday || !isBefore(rowTime, now)) {
+                rows.push(rowTime);
+            }
+        }
+        return rows;
+    }, [date]);
 
+    // Build columns for grid
+    const { columns, spaceGroups } = useMemo(() => {
+        const cols: ColumnDef[] = [];
 
+        filteredData.forEach((item) => {
+            const configuredSlots = item.space.slots?.length > 0
+                ? item.space.slots
+                : Array.from({ length: item.space.capacity }, (_, i) => ({
+                    id: `legacy-${i}`,
+                    name: `${i + 1}`,
+                    number: i + 1,
+                    isActive: true
+                }));
 
+            configuredSlots.forEach((subSlot, idx) => {
+                cols.push({
+                    space: item.space,
+                    subSlot,
+                    subSlotIndex: idx
+                });
+            });
+        });
+
+        const groups = filteredData.map((item) => ({
+            space: item.space,
+            colSpan: item.space.slots?.length > 0 ? item.space.slots.length : item.space.capacity
+        }));
+
+        return { columns: cols, spaceGroups: groups };
+    }, [filteredData]);
+
+    // Loading state
     if (loading) {
         return (
             <div className="h-full flex items-center justify-center">
@@ -117,26 +102,10 @@ export function AllSpacesView({
         );
     }
 
-    // ... (Rest of component until return)
-
-    const now = new Date();
-    const endHour = 22;
-    const timeRows: Date[] = [];
-    const baseDate = startOfDay(date);
-    const isToday = isSameDay(date, now);
-    const openingHour = 6;
-    const startHour = isToday ? Math.max(now.getHours(), openingHour) : openingHour;
-
-    for (let h = startHour; h < endHour; h++) {
-        const rowTime = addHours(baseDate, h);
-        if (!isToday || !isBefore(rowTime, now)) {
-            timeRows.push(rowTime);
-        }
-    }
-
+    // Empty state
     if (filteredData.length === 0) {
         if (viewMode === 'SINGLE' && !mobileSelectedSpaceId) {
-            return <div className="p-8 text-center text-muted-foreground">Select a space to view availability</div>
+            return <div className="p-8 text-center text-muted-foreground">Select a space to view availability</div>;
         }
         return (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
@@ -147,349 +116,51 @@ export function AllSpacesView({
         );
     }
 
-    // Flatten: each space has multiple slots (sub-slots)
-    interface ColumnDef {
-        space: SpaceAvailability['space'];
-        subSlot: { id: string; name: string; number: number };
-        subSlotIndex: number;
-    }
-
-    const columns: ColumnDef[] = [];
-    filteredData.forEach((item) => {
-        const configuredSlots = item.space.slots?.length > 0
-            ? item.space.slots
-            : Array.from({ length: item.space.capacity }, (_, i) => ({
-                id: `legacy-${i}`,
-                name: `${i + 1}`,
-                number: i + 1,
-                isActive: true
-            }));
-
-        configuredSlots.forEach((subSlot: any, idx: number) => {
-            columns.push({
-                space: item.space,
-                subSlot,
-                subSlotIndex: idx
-            });
-        });
-    });
-
-    // Group columns by space for header rendering
-    const spaceGroups = filteredData.map((item) => ({
-        space: item.space,
-        colSpan: item.space.slots?.length > 0 ? item.space.slots.length : item.space.capacity
-    }));
-
     return (
-        <TooltipProvider>
-            <div className="h-full flex flex-col overflow-hidden">
-                {/* Legend - HIDDEN ON MOBILE to save space if needed, or kept simple */}
-                <div className="hidden md:flex flex-shrink-0 items-center gap-6 text-sm pb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded border border-border bg-background" />
-                        <span className="text-muted-foreground text-xs">Available</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded border border-primary/30 bg-primary/10" />
-                        <span className="text-muted-foreground text-xs">My booking</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded border border-border bg-muted" />
-                        <span className="text-muted-foreground text-xs">Booked</span>
-                    </div>
-                </div>
+        <div className="h-full flex flex-col overflow-hidden">
+            {/* Legend - Desktop only */}
+            <Legend />
 
-                {/* Scrollable Grid Container - Desktop */}
-                <div className="hidden md:flex flex-1 overflow-auto border rounded-lg bg-card">
-                    {/* ... Desktop Table Implementation (keeping existing logic via ... or careful copy) ... */}
-                    {/* actually I need to preserve the desktop table exactly. */}
-                    <table className="w-full border-collapse min-w-max">
-                        {/* Sticky Header - Space Names */}
-                        <thead className="sticky top-0 z-20 bg-muted">
-                            {/* Space names row */}
-                            <tr className="border-b">
-                                <th className="sticky left-0 z-30 bg-muted w-20 min-w-20 border-r px-3 py-2">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Time</span>
-                                </th>
-                                {spaceGroups.map((group, i) => (
-                                    <th
-                                        key={group.space.id}
-                                        colSpan={group.colSpan}
-                                        className={cn(
-                                            "px-2 py-3 text-center border-b border-border/40 transition-colors",
-                                            i % 2 === 0 ? "bg-muted/10" : "bg-background",
-                                            i > 0 && "border-l-[2px] border-primary/20"
-                                        )}
-                                    >
-                                        <span className="font-display text-base font-medium tracking-tight text-foreground/90">{group.space.name}</span>
-                                    </th>
-                                ))}
-                            </tr>
-                            {/* Slot numbers row */}
-                            <tr className="border-b bg-muted/50">
-                                <th className="sticky left-0 z-30 bg-muted/50 border-r"></th>
-                                {columns.map((col, i) => {
-                                    const isFirstOfSpace = i === 0 || columns[i - 1].space.id !== col.space.id;
-                                    const spaceGroupIdx = filteredData.findIndex(d => d.space.id === col.space.id);
-                                    return (
-                                        <th
-                                            key={`${col.space.id}-${col.subSlot.id}`}
-                                            className={cn(
-                                                "px-1 py-2 text-center min-w-[70px] border-b border-border/40 transition-colors",
-                                                spaceGroupIdx % 2 === 0 ? "bg-muted/10" : "bg-background",
-                                                isFirstOfSpace && i > 0 && "border-l-[2px] border-primary/20"
-                                            )}
-                                        >
-                                            <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest">{col.subSlot.name}</span>
-                                        </th>
-                                    );
-                                })}
-                            </tr>
-                        </thead>
+            {/* Desktop Grid */}
+            <BookingGrid
+                data={filteredData}
+                timeRows={timeRows}
+                columns={columns}
+                spaceGroups={spaceGroups}
+                currentUserEmail={session?.user?.email ?? undefined}
+                onBook={onBook}
+                onCancel={onCancel}
+            />
 
-                        {/* Body */}
-                        <tbody>
-                            {timeRows.map((rowTime) => {
-                                const rowHour = rowTime.getHours();
+            {/* Mobile View */}
+            <MobileBookingView
+                data={filteredData}
+                timeRows={timeRows}
+                currentUserEmail={session?.user?.email ?? undefined}
+                viewMode={viewMode}
+                onBook={onBook}
+                onCancel={onCancel}
+            />
+        </div>
+    );
+}
 
-                                return (
-                                    <tr key={rowTime.toISOString()} className="border-b border-border/50 hover:bg-muted/30">
-                                        {/* Time cell - sticky left */}
-                                        <td className="sticky left-0 z-10 bg-card border-r px-3 py-2 text-right whitespace-nowrap">
-                                            <div className="text-sm font-medium">{format(rowTime, 'h:mm')}</div>
-                                            <div className="text-[10px] text-muted-foreground uppercase">{format(rowTime, 'a')}</div>
-                                        </td>
-
-                                        {/* Slot cells */}
-                                        {columns.map((col, colIdx) => {
-                                            const spaceData = filteredData.find(d => d.space.id === col.space.id);
-                                            const slot = spaceData?.slots.find(s => {
-                                                const sTime = new Date(s.startTime);
-                                                return sTime.getHours() === rowHour && isSameDay(sTime, rowTime);
-                                            });
-
-                                            if (!slot) {
-                                                const isFirstOfSpace = colIdx === 0 || columns[colIdx - 1].space.id !== col.space.id;
-                                                return (
-                                                    <td
-                                                        key={`${col.space.id}-${col.subSlot.id}-${rowHour}`}
-                                                        className={cn(
-                                                            "p-1",
-                                                            isFirstOfSpace && colIdx > 0 && "border-l-[4px] border-border"
-                                                        )}
-                                                    >
-                                                        <div className="h-10 bg-muted/30 rounded" />
-                                                    </td>
-                                                );
-                                            }
-
-                                            const booked = slot.bookings?.find(b =>
-                                                b.slotId === col.subSlot.id || b.slotIndex === col.subSlotIndex
-                                            );
-                                            const isMine = booked?.userEmail === session?.user?.email;
-                                            const slotStartTime = new Date(slot.startTime);
-                                            const isPast = isBefore(slotStartTime, now);
-                                            const maxAdvanceDays = col.space.rules?.maxAdvanceDays ?? 7;
-                                            const maxAllowedDate = endOfDay(addDays(now, maxAdvanceDays));
-                                            const isTooFarAhead = isAfter(slotStartTime, maxAllowedDate);
-                                            const isDisabled = isPast || isTooFarAhead;
-                                            const isFirstOfSpace = colIdx === 0 || columns[colIdx - 1].space.id !== col.space.id;
-
-                                            return (
-                                                <td
-                                                    key={`${col.space.id}-${col.subSlot.id}-${rowHour}`}
-                                                    className={cn(
-                                                        "p-1 transition-colors",
-                                                        filteredData.findIndex(d => d.space.id === col.space.id) % 2 === 0 ? "bg-muted/10" : "bg-background",
-                                                        isFirstOfSpace && colIdx > 0 && "border-l-[2px] border-primary/20"
-                                                    )}
-                                                >
-                                                    <Tooltip delayDuration={0}>
-                                                        <TooltipTrigger asChild>
-                                                            <button
-                                                                disabled={isDisabled || (!!booked && !isMine)}
-                                                                onClick={() => {
-                                                                    if (isMine && booked) {
-                                                                        onCancel({ booking: booked, slot, space: col.space });
-                                                                    } else if (!booked && !isDisabled) {
-                                                                        onBook({ space: col.space, slotRaw: slot, subSlot: col.subSlot, idx: col.subSlotIndex });
-                                                                    }
-                                                                }}
-                                                                className={cn(
-                                                                    "w-full h-10 rounded border flex items-center justify-center transition-all text-xs group relative",
-                                                                    booked
-                                                                        ? isMine
-                                                                            ? "bg-primary/10 border-primary/30 hover:bg-primary/20"
-                                                                            : "bg-muted border-border cursor-not-allowed"
-                                                                        : isDisabled
-                                                                            ? "bg-muted/30 border-border/30 opacity-40 cursor-not-allowed"
-                                                                            : "bg-background border-border hover:border-primary hover:bg-primary/5 cursor-pointer"
-                                                                )}
-                                                            >
-                                                                {booked ? (
-                                                                    <div className="flex items-center gap-1.5 px-1.5 overflow-hidden w-full">
-                                                                        <Avatar className="h-5 w-5 flex-shrink-0">
-                                                                            {booked.userAvatar && <AvatarImage src={booked.userAvatar} />}
-                                                                            <AvatarFallback className={cn(
-                                                                                "text-[8px]",
-                                                                                isMine ? "bg-primary/20 text-primary" : "bg-muted-foreground/10"
-                                                                            )}>
-                                                                                {getInitials(booked.userName)}
-                                                                            </AvatarFallback>
-                                                                        </Avatar>
-                                                                        <span className={cn(
-                                                                            "text-[10px] font-medium truncate",
-                                                                            isMine ? "text-primary" : "text-muted-foreground"
-                                                                        )}>
-                                                                            {booked.userName.split(' ')[0]}
-                                                                        </span>
-                                                                        {isMine && (
-                                                                            <X className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity absolute top-0.5 right-0.5" />
-                                                                        )}
-                                                                    </div>
-                                                                ) : null}
-                                                            </button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="top" className="p-0 border-none bg-transparent shadow-none" sideOffset={10}>
-                                                            <div className="bg-card border border-border/60 shadow-xl rounded-xl p-4 min-w-[180px] backdrop-blur-md">
-                                                                <div className="space-y-3">
-                                                                    <div className="space-y-1">
-                                                                        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold leading-none">
-                                                                            {col.space.name}
-                                                                        </div>
-                                                                        <div className="text-sm uppercase tracking-widest text-primary font-bold">
-                                                                            {col.subSlot.name}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="h-px w-full bg-border/40" />
-                                                                    <div className="space-y-1">
-                                                                        <div className="text-base font-medium text-foreground tracking-tight">
-                                                                            {format(slotStartTime, 'h:mm a')} – {format(new Date(slot.endTime), 'h:mm a')}
-                                                                        </div>
-                                                                        <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                                                                            {booked
-                                                                                ? (isMine ? 'Your Reservation' : `Booked by ${booked.userName}`)
-                                                                                : (isPast ? 'Reservations closed' : 'Available for booking')}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile View - Configurable Mode */}
-                <div className="md:hidden flex flex-col gap-6 pb-24 px-4 overflow-y-auto no-scrollbar">
-                    {filteredData.map((item) => (
-                        <div key={item.space.id} className={cn(
-                            "overflow-hidden",
-                            viewMode === 'SINGLE' ? "" : "border-b border-border/50 pb-6 last:border-0"
-                        )}>
-                            {/* Header for space - Hide in single view if obvious, but keep for now */}
-                            <div className={cn(
-                                "flex items-center justify-between mb-3",
-                                viewMode === 'SINGLE' ? "hidden" : ""
-                            )}>
-                                <h3 className="font-semibold text-sm">{item.space.name}</h3>
-                                <div className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full capitalize">
-                                    {item.space.type}
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                {timeRows.map((rowTime) => {
-                                    const rowHour = rowTime.getHours();
-                                    const slot = item.slots.find(s => {
-                                        const sTime = new Date(s.startTime);
-                                        return sTime.getHours() === rowHour && isSameDay(sTime, rowTime);
-                                    });
-
-                                    if (!slot) return null;
-
-                                    const configuredSlots = item.space.slots?.length > 0
-                                        ? item.space.slots
-                                        : Array.from({ length: item.space.capacity }, (_, i) => ({
-                                            id: `legacy-${i}`,
-                                            name: `${i + 1}`,
-                                            number: i + 1,
-                                            isActive: true
-                                        }));
-
-                                    return (
-                                        <div key={rowTime.toISOString()} className="flex items-center gap-3">
-                                            <div className="w-10 flex-shrink-0 text-left">
-                                                <div className="text-xs font-semibold">{format(rowTime, 'h:mm')}</div>
-                                                <div className="text-[9px] text-muted-foreground uppercase font-medium">{format(rowTime, 'a')}</div>
-                                            </div>
-                                            <div className="flex-1 flex gap-2 overflow-x-auto no-scrollbar -mr-4 pr-4 pl-1">
-                                                {configuredSlots.map((subSlot: any, idx: number) => {
-                                                    const booked = slot.bookings?.find(b =>
-                                                        b.slotId === subSlot.id || b.slotIndex === idx
-                                                    );
-                                                    const isMine = booked?.userEmail === session?.user?.email;
-                                                    const slotStartTime = new Date(slot.startTime);
-                                                    const isPast = isBefore(slotStartTime, now);
-                                                    const maxAdvanceDays = item.space.rules?.maxAdvanceDays ?? 7;
-                                                    const maxAllowedDate = endOfDay(addDays(now, maxAdvanceDays));
-                                                    const isTooFarAhead = isAfter(slotStartTime, maxAllowedDate);
-                                                    const isDisabled = isPast || isTooFarAhead;
-
-                                                    return (
-                                                        <button
-                                                            key={`${item.space.id}-${subSlot.id}-${rowHour}`}
-                                                            disabled={isDisabled || (!!booked && !isMine)}
-                                                            onClick={() => {
-                                                                if (isMine && booked) {
-                                                                    onCancel({ booking: booked, slot, space: item.space });
-                                                                } else if (!booked && !isDisabled) {
-                                                                    onBook({ space: item.space, slotRaw: slot, subSlot, idx });
-                                                                }
-                                                            }}
-                                                            className={cn(
-                                                                "h-8 min-w-[70px] rounded-lg border flex items-center justify-center transition-all text-xs relative overflow-hidden flex-shrink-0",
-                                                                booked
-                                                                    ? isMine
-                                                                        ? "bg-primary/10 border-primary/30 text-primary"
-                                                                        : "bg-muted border-border text-muted-foreground/50 cursor-not-allowed"
-                                                                    : isDisabled
-                                                                        ? "bg-muted/10 border-border/10 opacity-30 cursor-not-allowed"
-                                                                        : "bg-card border-border shadow-sm hover:border-primary hover:bg-primary/5 active:bg-primary/10"
-                                                            )}
-                                                        >
-                                                            {booked ? (
-                                                                <div className="flex items-center justify-center gap-1.5 w-full px-2">
-                                                                    {isMine ? (
-                                                                        <span className="text-[10px] font-medium">My Book</span>
-                                                                    ) : (
-                                                                        <span className="truncate text-[10px] text-muted-foreground">Booked</span>
-                                                                    )}
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-muted-foreground/80 font-medium">{subSlot.name}</span>
-                                                            )}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* Spacer for bottom nav */}
-                    <div className="h-20" />
-                </div>
+/** Booking legend for desktop */
+function Legend() {
+    return (
+        <div className="hidden md:flex flex-shrink-0 items-center gap-6 text-sm pb-4">
+            <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded border border-border bg-background" />
+                <span className="text-muted-foreground text-xs">Available</span>
             </div>
-        </TooltipProvider>
+            <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded border border-primary/30 bg-primary/10" />
+                <span className="text-muted-foreground text-xs">My booking</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded border border-border bg-muted" />
+                <span className="text-muted-foreground text-xs">Booked</span>
+            </div>
+        </div>
     );
 }

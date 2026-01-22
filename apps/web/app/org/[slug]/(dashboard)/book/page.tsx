@@ -514,7 +514,9 @@ export default function BookPage() {
                     viewMode={viewMode}
                     mobileSelectedSpaceId={mobileSelectedSpace?.id}
                     onBook={({ space, slotRaw, subSlot, idx }) => {
-                        setSelectedSpace(space);
+                        // Find full space from loaded spaces array
+                        const fullSpace = spaces.find(s => s.id === space.id);
+                        if (fullSpace) setSelectedSpace(fullSpace);
                         setBookingInfo({
                             slot: {
                                 hour: new Date(slotRaw.startTime).getHours(),
@@ -528,7 +530,9 @@ export default function BookPage() {
                         });
                     }}
                     onCancel={({ booking, slot, space }) => {
-                        setSelectedSpace(space);
+                        // Find full space from loaded spaces array
+                        const fullSpace = spaces.find(s => s.id === space.id);
+                        if (fullSpace) setSelectedSpace(fullSpace);
                         setCancelInfo({
                             booking: {
                                 ...booking,

@@ -7,6 +7,7 @@ import { bookingRoutes } from './routes/booking.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
 import { sseRoutes } from './routes/sse.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
+import { requestLogger } from './middleware/request-logger.middleware.js';
 import { startBookingWorker } from './workers/booking.worker.js';
 import { validateEnv, generalLimiter, createLogger } from './lib/core.js';
 import { createError } from './middleware/error.middleware.js';
@@ -25,12 +26,19 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Request logging (adds correlation IDs and timing)
+app.use(requestLogger);
+
 // Apply general rate limiting to all routes
 app.use(generalLimiter);
 
-// Health check
-app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check (excluded from logging for noise reduction)
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        correlationId: req.correlationId,
+    });
 });
 
 // Routes

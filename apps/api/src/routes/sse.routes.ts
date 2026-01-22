@@ -43,15 +43,7 @@ sseRoutes.get('/', async (req: Request, res: Response) => {
         if (jwtUser) {
             isAuthenticated = true;
             userEmail = jwtUser.email;
-        }
-    }
-
-    // Fallback for dev mode
-    if (!isAuthenticated && process.env.ALLOW_HEADER_AUTH === 'true') {
-        userEmail = req.headers['x-user-email'] as string;
-        if (userEmail) {
-            isAuthenticated = true;
-            log.warn('SSE using header auth fallback', { email: userEmail });
+            log.debug('SSE authenticated via token', { email: userEmail });
         }
     }
 
