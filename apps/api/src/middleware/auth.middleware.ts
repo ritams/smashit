@@ -51,7 +51,7 @@ export async function authMiddleware(
         }
 
         // Fallback: Header-based auth (only in dev/migration mode)
-        if (!userEmail && process.env.ALLOW_HEADER_AUTH === 'true') {
+        if (!userEmail && process.env.ALLOW_HEADER_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
             userEmail = req.headers['x-user-email'] as string;
             userName = req.headers['x-user-name'] as string;
             userGoogleId = req.headers['x-user-google-id'] as string;

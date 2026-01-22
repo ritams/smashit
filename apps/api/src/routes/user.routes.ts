@@ -23,7 +23,7 @@ async function jwtAuth(req: AuthenticatedRequest, res: Response, next: NextFunct
 
     if (!token) {
         // Fallback for dev mode
-        if (process.env.ALLOW_HEADER_AUTH === 'true') {
+        if (process.env.ALLOW_HEADER_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
             const email = req.headers['x-user-email'] as string;
             if (email) {
                 const user = await prisma.user.findUnique({ where: { email } });
