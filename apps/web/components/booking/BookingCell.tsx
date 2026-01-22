@@ -57,7 +57,7 @@ export function BookingCell({
                 isFirstOfSpace && columnIndex > 0 && "border-l-[2px] border-primary/20"
             )}
         >
-            <Tooltip delayDuration={0}>
+            <Tooltip delayDuration={0} disableHoverableContent>
                 <TooltipTrigger asChild>
                     <button
                         disabled={isDisabled || (!!booked && !isMine)}
@@ -76,7 +76,11 @@ export function BookingCell({
                         {booked && <BookedContent booking={booked} isMine={isMine} />}
                     </button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="p-0 border-none bg-transparent shadow-none" sideOffset={10}>
+                <TooltipContent
+                    side="top"
+                    className="p-0 border-none bg-transparent shadow-none pointer-events-none"
+                    sideOffset={10}
+                >
                     <CellTooltip
                         spaceName={column.space.name}
                         subSlotName={column.subSlot.name}
