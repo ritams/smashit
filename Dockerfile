@@ -76,7 +76,7 @@ EXPOSE 3000
 EXPOSE 4000
 
 # Start command depends on APP_NAME
-CMD if [ "$APP_NAME" = "@smashit/web" ]; then \
+CMD if [ "$APP_NAME" = "@avith/web" ]; then \
       node web-standalone/apps/web/server.js; \
     else \
       node apps/api/dist/index.js; \

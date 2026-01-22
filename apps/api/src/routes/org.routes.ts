@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { createOrganizationSchema } from '@smashit/validators';
+import { createOrganizationSchema } from '@avith/validators';
 import { OrgService } from '../services/org.service.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
 import { authLimiter, createLogger } from '../lib/core.js';

@@ -8,7 +8,7 @@
 ## 1. Initial Server Setup (One-time)
 1.  Copy the `deploy` folder to your server:
     ```bash
-    scp -r deploy ubuntu@<YOUR_SERVER_IP>:~/smashit-deploy
+    scp -r deploy ubuntu@<YOUR_SERVER_IP>:~/avith-deploy
     ```
 2.  SSH into the server and run the swap script (CRITICAL for 1GB RAM):
     ```bash

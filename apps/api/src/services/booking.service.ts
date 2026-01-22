@@ -1,4 +1,4 @@
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 
 /**
  * Booking service - handles booking-related database operations

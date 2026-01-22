@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
-import { prisma } from '@smashit/database';
-import { createSpaceSchema, updateSpaceSchema, updateBookingRulesSchema, updateOrganizationSchema } from '@smashit/validators';
+import { prisma } from '@avith/database';
+import { createSpaceSchema, updateSpaceSchema, updateBookingRulesSchema, updateOrganizationSchema } from '@avith/validators';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
 import { AuthRequest } from '../middleware/auth.middleware.js';
 

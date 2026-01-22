@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import type { SSEMessage } from '@smashit/types';
+import type { SSEMessage } from '@avith/types';
 import { createLogger } from '../lib/core.js';
 
 const log = createLogger('SSE');

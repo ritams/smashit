@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { prisma } from '@smashit/database';
-import { updateUserProfileSchema } from '@smashit/validators';
+import { prisma } from '@avith/database';
+import { updateUserProfileSchema } from '@avith/validators';
 import { createError } from '../middleware/error.middleware.js';
 import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
 import { findOrCreateUser } from '../services/user.service.js';

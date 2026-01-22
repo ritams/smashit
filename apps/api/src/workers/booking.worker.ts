@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 import { redis, createLogger } from '../lib/core.js';
 import { BookingJobData } from '../lib/queue.js';
 import { startOfDay, addDays, isAfter, endOfDay } from 'date-fns';

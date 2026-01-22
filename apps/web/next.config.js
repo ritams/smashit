@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: 'standalone',
-    transpilePackages: ['@smashit/types', '@smashit/validators'],
+    transpilePackages: ['@avith/types', '@avith/validators'],
     images: {
         remotePatterns: [
             {

@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { prisma } from '@smashit/database';
-import { getAvailabilitySchema } from '@smashit/validators';
+import { prisma } from '@avith/database';
+import { getAvailabilitySchema } from '@avith/validators';
 
 import { orgMiddleware, OrgRequest } from '../middleware/org.middleware.js';
 import { authMiddleware, ensureOrgAccess } from '../middleware/auth.middleware.js';

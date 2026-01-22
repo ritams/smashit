@@ -1,5 +1,5 @@
 {
-    "name": "@smashit/api",
+    "name": "@avith/api",
     "version": "0.0.1",
     "private": true,
     "scripts": {
@@ -9,9 +9,9 @@
     },
     "dependencies": {
         "@panva/hkdf": "^1.2.1",
-        "@smashit/database": "workspace:*",
-        "@smashit/types": "workspace:*",
-        "@smashit/validators": "workspace:*",
+        "@avith/database": "workspace:*",
+        "@avith/types": "workspace:*",
+        "@avith/validators": "workspace:*",
         "bullmq": "^5.34.3",
         "cors": "^2.8.5",
         "date-fns": "^4.1.0",

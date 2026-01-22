@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 import { createError } from './error.middleware.js';
 import { OrgRequest } from './org.middleware.js';
 import { findOrCreateUser } from '../services/user.service.js';

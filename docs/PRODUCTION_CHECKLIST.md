@@ -69,7 +69,7 @@ NEXTAUTH_URL="https://your-domain.com"
 ### 1. Database URL
 ```bash
 # apps/api/.env & packages/database/.env
-DATABASE_URL="postgresql://user:password@host:5432/smashit?sslmode=require"
+DATABASE_URL="postgresql://user:password@host:5432/avith?sslmode=require"
 ```
 
 ### 2. Run Migrations

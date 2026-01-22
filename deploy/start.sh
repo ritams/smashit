@@ -1,11 +1,11 @@
 #!/bin/bash
 
 echo "Loading new images..."
-if [ -f "smashit-web.tar.gz" ]; then
-    gunzip -c smashit-web.tar.gz | docker load
+if [ -f "avith-web.tar.gz" ]; then
+    gunzip -c avith-web.tar.gz | docker load
 fi
-if [ -f "smashit-api.tar.gz" ]; then
-    gunzip -c smashit-api.tar.gz | docker load
+if [ -f "avith-api.tar.gz" ]; then
+    gunzip -c avith-api.tar.gz | docker load
 fi
 
 echo "Starting services..."

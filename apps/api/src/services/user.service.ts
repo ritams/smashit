@@ -1,4 +1,4 @@
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 import { createLogger } from '../lib/core.js';
 
 const log = createLogger('UserService');

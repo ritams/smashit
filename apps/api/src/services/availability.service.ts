@@ -1,4 +1,4 @@
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 import { fromZonedTime } from 'date-fns-tz';
 import { addHours, addMinutes } from 'date-fns';
 

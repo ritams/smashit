@@ -1,5 +1,5 @@
 import { Router, IRouter } from 'express';
-import { createBookingSchema } from '@smashit/validators';
+import { createBookingSchema } from '@avith/validators';
 import { orgMiddleware } from '../middleware/org.middleware.js';
 import { authMiddleware, ensureOrgAccess, AuthRequest } from '../middleware/auth.middleware.js';
 import { bookingQueue, bookingQueueEvents } from '../lib/queue.js';

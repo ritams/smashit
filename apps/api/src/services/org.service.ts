@@ -1,6 +1,6 @@
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 import { redisClient, createLogger } from '../lib/core.js';
-import { createOrganizationSchema } from '@smashit/validators';
+import { createOrganizationSchema } from '@avith/validators';
 import { findOrCreateUser } from './user.service.js';
 import { z } from 'zod';
 

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 import { addSSEConnection, removeSSEConnection } from '../services/sse.service.js';
 import { sseLimiter, createLogger } from '../lib/core.js';
 import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
