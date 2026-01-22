@@ -29,9 +29,10 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
-      - DATABASE_URL
-      - REDIS_URL
+      - DATABASE_URL=postgresql://avith:fyuhfhuisajr934@postgres:5432/avith
+      - REDIS_URL=redis://redis:6379
       - CORS_ORIGIN
+      - NEXTAUTH_SECRET=${AUTH_SECRET}
       - AUTH_SECRET
     depends_on:
       postgres:
@@ -44,7 +45,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: avith
-      POSTGRES_PASSWORD: avith_password
+      POSTGRES_PASSWORD: fyuhfhuisajr9348
       POSTGRES_DB: avith
     volumes:
       - postgres_data:/var/lib/postgresql/data
