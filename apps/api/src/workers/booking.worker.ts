@@ -130,8 +130,10 @@ export const processBooking = async (job: Job<BookingJobData>) => {
         }
     }
 
+    import { Prisma } from '@prisma/client';
+
     // Use transaction for atomicity
-    const booking = await prisma.$transaction(async (tx) => {
+    const booking = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         let targetSlotId = slotId;
         let targetSlotIndex = slotIndex;
 
