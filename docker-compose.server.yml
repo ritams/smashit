@@ -29,7 +29,7 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
-      - DATABASE_URL=postgresql://avith:fyuhfhuisajr934@postgres:5432/avith
+      - DATABASE_URL=postgresql://avith:fyuhfhuisajr9348@postgres:5432/avith
       - REDIS_URL=redis://redis:6379
       - CORS_ORIGIN
       - NEXTAUTH_SECRET=${AUTH_SECRET}
