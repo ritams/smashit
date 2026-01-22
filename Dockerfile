@@ -25,6 +25,8 @@ RUN pnpm turbo db:generate
 
 # Build the apps
 ARG APP_NAME
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN pnpm turbo build --filter=${APP_NAME}...
 
 # RUNNER STAGE
