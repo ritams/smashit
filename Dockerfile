@@ -7,18 +7,11 @@ WORKDIR /app
 RUN corepack enable
 
 # Copy only the files needed for installation first for caching
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/web/package.json ./apps/web/
-COPY packages/database/package.json ./packages/database/
-COPY packages/types/package.json ./packages/types/
-COPY packages/validators/package.json ./packages/validators/
+# Copy the rest of the source
+COPY . .
 
 # Install dependencies (all of them since we are in a monolith-like context now)
 RUN pnpm install --frozen-lockfile
-
-# Copy the rest of the source
-COPY . .
 
 # Generate Prisma client
 RUN pnpm turbo db:generate
