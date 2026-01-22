@@ -3,7 +3,7 @@ import { prisma } from '@smashit/database';
 import { createSpaceSchema, updateSpaceSchema, updateBookingRulesSchema, updateOrganizationSchema } from '@smashit/validators';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
 import { orgMiddleware } from '../middleware/org.middleware.js';
-import { authMiddleware, adminMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
+import { authMiddleware, ensureOrgAccess, adminMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
 
 // Sport-specific slot naming
 const SLOT_PREFIXES: Record<string, string> = {
@@ -28,6 +28,7 @@ export const adminRoutes: Router = Router({ mergeParams: true });
 // Apply middleware - must be authenticated and admin
 adminRoutes.use(orgMiddleware);
 adminRoutes.use(authMiddleware);
+adminRoutes.use(ensureOrgAccess);
 adminRoutes.use(adminMiddleware);
 
 // Update org settings

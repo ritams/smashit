@@ -1,4 +1,6 @@
 import { rateLimit, Options } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import Redis from 'ioredis';
 
 /**
  * Centralized Logger class for structured logging
@@ -59,8 +61,22 @@ class Logger {
 }
 
 // Export singleton and factory
+// Export singleton and factory
 export const logger = new Logger();
 export const createLogger = (context: string) => new Logger(context);
+
+// Redis Client
+export const redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    lazyConnect: true,
+    retryStrategy: (times) => {
+        if (times > 3) {
+            logger.warn('Redis connection failed, falling back to memory rate limiting');
+            return null;
+        }
+        return Math.min(times * 50, 2000);
+    }
+});
+redisClient.on('error', (err) => logger.warn('Redis error', { error: err.message }));
 
 /**
  * Rate limiting configurations
@@ -76,6 +92,11 @@ export const generalLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    store: process.env.REDIS_URL ? new RedisStore({
+        // @ts-expect-error - ioredis call signature mismatch with rate-limit-redis
+        sendCommand: (...args: string[]) => redisClient.call(...args),
+        prefix: 'rl:general:',
+    }) : undefined,
 });
 
 // Auth/sensitive endpoints: 20 requests per minute
@@ -88,6 +109,11 @@ export const authLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    store: process.env.REDIS_URL ? new RedisStore({
+        // @ts-expect-error - ioredis call signature mismatch with rate-limit-redis
+        sendCommand: (...args: string[]) => redisClient.call(...args),
+        prefix: 'rl:auth:',
+    }) : undefined,
 });
 
 // Booking creation: 30 per minute to prevent spam
@@ -100,6 +126,11 @@ export const bookingLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    store: process.env.REDIS_URL ? new RedisStore({
+        // @ts-expect-error - ioredis call signature mismatch with rate-limit-redis
+        sendCommand: (...args: string[]) => redisClient.call(...args),
+        prefix: 'rl:booking:',
+    }) : undefined,
 });
 
 // SSE connections: 30 per minute (high for robustness during flapping)
@@ -112,6 +143,11 @@ export const sseLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    store: process.env.REDIS_URL ? new RedisStore({
+        // @ts-expect-error - ioredis call signature mismatch with rate-limit-redis
+        sendCommand: (...args: string[]) => redisClient.call(...args),
+        prefix: 'rl:sse:',
+    }) : undefined,
 });
 
 /**

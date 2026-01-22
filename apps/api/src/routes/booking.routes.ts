@@ -2,7 +2,7 @@ import { Router, IRouter } from 'express';
 import { prisma } from '@smashit/database';
 import { createBookingSchema } from '@smashit/validators';
 import { orgMiddleware } from '../middleware/org.middleware.js';
-import { authMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
+import { authMiddleware, ensureOrgAccess, AuthRequest } from '../middleware/auth.middleware.js';
 import { bookingQueue, bookingQueueEvents } from '../lib/queue.js';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
 import { bookingLimiter } from '../lib/core.js';
@@ -12,6 +12,7 @@ export const bookingRoutes: IRouter = Router({ mergeParams: true });
 // Apply middleware
 bookingRoutes.use(orgMiddleware);
 bookingRoutes.use(authMiddleware);
+bookingRoutes.use(ensureOrgAccess);
 
 // Get bookings for a space on a date
 bookingRoutes.get('/', async (req: AuthRequest, res, next) => {

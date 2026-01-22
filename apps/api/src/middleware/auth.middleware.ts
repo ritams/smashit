@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '@smashit/database';
 import { createError } from './error.middleware.js';
 import { OrgRequest } from './org.middleware.js';
-import { findOrCreateUser, ensureMembership } from '../services/user.service.js';
+import { findOrCreateUser } from '../services/user.service.js';
 import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
 import { createLogger } from '../lib/core.js';
 
@@ -21,8 +21,10 @@ export interface AuthRequest extends OrgRequest {
 }
 
 /**
- * Auth middleware - verifies JWT token from Authorization header
- * Falls back to x-user-* headers only if ALLOW_HEADER_AUTH=true (dev mode)
+ * Pure Auth Middleware
+ * Verifies the user is authenticated (via JWT).
+ * Populates req.user.
+ * DOES NOT check org membership.
  */
 export async function authMiddleware(
     req: AuthRequest,
@@ -30,48 +32,24 @@ export async function authMiddleware(
     next: NextFunction
 ) {
     try {
-        let userEmail: string | undefined;
-        let userName: string | undefined;
-        let userGoogleId: string | undefined;
-        let userAvatar: string | undefined;
-
-        // Primary: Verify JWT from Authorization header
         const authHeader = req.headers.authorization;
         const token = extractBearerToken(authHeader);
 
-        if (token) {
-            const jwtUser = await verifySessionToken(token);
-            if (jwtUser) {
-                userEmail = jwtUser.email;
-                userName = jwtUser.name;
-                userGoogleId = jwtUser.sub;
-                userAvatar = jwtUser.picture;
-                log.debug('Authenticated via JWT', { email: userEmail });
-            }
-        }
-
-        // Fallback: Header-based auth (only in dev/migration mode)
-        if (!userEmail && process.env.ALLOW_HEADER_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
-            userEmail = req.headers['x-user-email'] as string;
-            userName = req.headers['x-user-name'] as string;
-            userGoogleId = req.headers['x-user-google-id'] as string;
-            userAvatar = req.headers['x-user-avatar'] as string;
-
-            if (userEmail) {
-                log.warn('Using header-based auth (insecure fallback)', { email: userEmail });
-            }
-        }
-
-        if (!userEmail) {
+        if (!token) {
             throw createError('Authentication required', 401, 'UNAUTHORIZED');
         }
 
-        // Use shared user service
+        const jwtUser = await verifySessionToken(token);
+        if (!jwtUser) {
+            throw createError('Invalid token', 401, 'INVALID_TOKEN');
+        }
+
+        // Use shared user service to sync with DB
         const user = await findOrCreateUser({
-            email: userEmail,
-            name: userName,
-            googleId: userGoogleId,
-            avatarUrl: userAvatar,
+            email: jwtUser.email,
+            name: jwtUser.name,
+            googleId: jwtUser.sub,
+            avatarUrl: jwtUser.picture,
         });
 
         req.user = {
@@ -80,56 +58,71 @@ export async function authMiddleware(
             name: user.name,
         };
 
-        // If there's an org context, check/create membership
-        if (req.org?.id) {
-            // Check Access Control
-            const { allowedDomains, allowedEmails } = req.org;
-            const hasRestrictions = (allowedDomains && allowedDomains.length > 0) || (allowedEmails && allowedEmails.length > 0);
+        log.debug('Authenticated via JWT', { email: user.email });
+        next();
+    } catch (error) {
+        next(error);
+    }
+}
 
-            let isAllowed = !hasRestrictions; // Default allow if no rules
-
-            if (hasRestrictions) {
-                const domain = user.email.split('@')[1];
-                const isDomainAllowed = allowedDomains?.includes(domain);
-                const isEmailAllowed = allowedEmails?.includes(user.email);
-
-                if (isDomainAllowed || isEmailAllowed) {
-                    isAllowed = true;
-                }
-            }
-
-            // Check if already a member (admins are always allowed)
-            let membership = await prisma.membership.findUnique({
-                where: {
-                    userId_orgId: { userId: user.id, orgId: req.org.id },
-                },
-            });
-
-            // If strict enforcement: Block if not allowed, UNLESS they are an existing ADMIN
-            // If they are an existing MEMBER but now banned, we block them.
-            if (!isAllowed) {
-                if (membership && membership.role === 'ADMIN') {
-                    // Admins bypass restrictions
-                    log.info('Admin bypassing access control', { userId: user.id, email: user.email });
-                } else {
-                    // Block access
-                    log.warn('Access denied by policy', { userId: user.id, email: user.email, orgId: req.org.id });
-                    throw createError('Access denied: Your email is not allowed in this organization', 403, 'ACCESS_DENIED');
-                }
-            }
-
-            if (!membership) {
-                membership = await prisma.membership.create({
-                    data: { userId: user.id, orgId: req.org.id, role: 'MEMBER' },
-                });
-                log.info('Created membership', { userId: user.id, orgId: req.org.id, role: 'MEMBER' });
-            }
-
-            req.membership = {
-                id: membership.id,
-                role: membership.role as 'ADMIN' | 'MEMBER',
-            };
+/**
+ * Org Access Middleware
+ * Checks if the authenticated user has access to the organization for the current route.
+ * Assumes authMiddleware has run and req.org is populated.
+ */
+export async function ensureOrgAccess(
+    req: AuthRequest,
+    _res: Response,
+    next: NextFunction
+) {
+    try {
+        if (!req.user) {
+            throw createError('User not authenticated', 401, 'UNAUTHORIZED');
         }
+        if (!req.org) {
+            // This middleware expects orgMiddleware to have run
+            throw createError('Organization context missing', 500, 'INTERNAL_ERROR');
+        }
+
+        // Check Access Control (Allowlists)
+        const { allowedDomains, allowedEmails } = req.org;
+        const hasRestrictions = (allowedDomains && allowedDomains.length > 0) || (allowedEmails && allowedEmails.length > 0);
+        let isAllowed = !hasRestrictions;
+
+        if (hasRestrictions) {
+            const domain = req.user.email.split('@')[1];
+            isAllowed = allowedDomains?.includes(domain) || allowedEmails?.includes(req.user.email);
+        }
+
+        // Check Existing Membership
+        let membership = await prisma.membership.findUnique({
+            where: {
+                userId_orgId: { userId: req.user.id, orgId: req.org.id },
+            },
+        });
+
+        // Block if not allowed AND not an admin
+        if (!isAllowed) {
+            if (membership && membership.role === 'ADMIN') {
+                log.info('Admin bypassing access control', { userId: req.user.id });
+            } else {
+                log.warn('Access denied by policy', { email: req.user.email, orgId: req.org.id });
+                throw createError('Access denied: Your email is not allowed in this organization', 403, 'ACCESS_DENIED');
+            }
+        }
+
+        // Create membership if needed
+        if (!membership) {
+            membership = await prisma.membership.create({
+                data: { userId: req.user.id, orgId: req.org.id, role: 'MEMBER' },
+            });
+            log.info('Created membership', { userId: req.user.id, orgId: req.org.id });
+        }
+
+        req.membership = {
+            id: membership.id,
+            role: membership.role as 'ADMIN' | 'MEMBER',
+        };
 
         next();
     } catch (error) {
@@ -137,12 +130,11 @@ export async function authMiddleware(
     }
 }
 
-// Admin middleware - requires ADMIN role in the org
-export async function adminMiddleware(
+export const adminMiddleware = async (
     req: AuthRequest,
     _res: Response,
     next: NextFunction
-) {
+) => {
     try {
         if (!req.membership || req.membership.role !== 'ADMIN') {
             throw createError('Admin access required', 403, 'FORBIDDEN');
@@ -151,5 +143,4 @@ export async function adminMiddleware(
     } catch (error) {
         next(error);
     }
-}
-
+};

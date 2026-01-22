@@ -1,8 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { prisma } from '@smashit/database';
 import { createOrganizationSchema } from '@smashit/validators';
-import { findOrCreateUser } from '../services/user.service.js';
-import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
+import { OrgService } from '../services/org.service.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
 import { authLimiter, createLogger } from '../lib/core.js';
 
 const log = createLogger('OrgRoutes');
@@ -14,18 +13,7 @@ orgRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) 
     try {
         const { slug } = req.params;
 
-        const org = await prisma.organization.findUnique({
-            where: { slug: slug as string },
-            select: {
-                id: true,
-                name: true,
-                slug: true,
-                timezone: true,
-                settings: true,
-                allowedDomains: true,
-                allowedEmails: true,
-            },
-        });
+        const org = await OrgService.getOrgBySlug(slug as string);
 
         if (!org) {
             return res.status(404).json({
@@ -41,34 +29,9 @@ orgRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) 
 });
 
 // Create new organization (requires authentication)
-orgRoutes.post('/', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
+orgRoutes.post('/', authLimiter, authMiddleware, async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        // Verify JWT token
-        const token = extractBearerToken(req.headers.authorization);
-        let userEmail: string | undefined;
-        let userName: string | undefined;
-        let userGoogleId: string | undefined;
-        let userAvatar: string | undefined;
-
-        if (token) {
-            const jwtUser = await verifySessionToken(token);
-            if (jwtUser) {
-                userEmail = jwtUser.email;
-                userName = jwtUser.name;
-                userGoogleId = jwtUser.sub;
-                userAvatar = jwtUser.picture;
-            }
-        }
-
-        // Fallback for dev mode
-        if (!userEmail && process.env.ALLOW_HEADER_AUTH === 'true') {
-            userEmail = req.headers['x-user-email'] as string;
-            userName = req.headers['x-user-name'] as string;
-            userGoogleId = req.headers['x-user-google-id'] as string;
-            userAvatar = req.headers['x-user-avatar'] as string;
-        }
-
-        if (!userEmail) {
+        if (!req.user) {
             return res.status(401).json({
                 success: false,
                 error: { code: 'UNAUTHORIZED', message: 'Must be logged in to create an organization' },
@@ -86,53 +49,21 @@ orgRoutes.post('/', authLimiter, async (req: Request, res: Response, next: NextF
             });
         }
 
-        const data = parseResult.data;
-
-        // Check if slug already exists
-        const existing = await prisma.organization.findUnique({
-            where: { slug: data.slug },
-        });
-
-        if (existing) {
-            return res.status(400).json({
-                success: false,
-                error: { code: 'SLUG_TAKEN', message: 'This URL is already taken' },
+        try {
+            const org = await OrgService.createOrg(parseResult.data, req.user!.id);
+            res.status(201).json({
+                success: true,
+                data: org,
             });
+        } catch (err: any) {
+            if (err.message === 'SLUG_TAKEN') {
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'SLUG_TAKEN', message: 'This URL is already taken' },
+                });
+            }
+            throw err;
         }
-
-        // Use shared user service
-        const user = await findOrCreateUser({
-            email: userEmail,
-            name: userName,
-            googleId: userGoogleId,
-            avatarUrl: userAvatar,
-        });
-
-        // Create organization
-        const org = await prisma.organization.create({
-            data: {
-                name: data.name,
-                slug: data.slug,
-                timezone: data.timezone || 'Asia/Kolkata',
-            },
-        });
-
-        // Create membership as ADMIN
-        await prisma.membership.create({
-            data: {
-                userId: user.id,
-                orgId: org.id,
-                role: 'ADMIN',
-            },
-        });
-
-        res.status(201).json({
-            success: true,
-            data: {
-                ...org,
-                role: 'ADMIN',
-            },
-        });
     } catch (error) {
         log.error('Error creating org', { error: (error as Error).message });
         next(error);
@@ -143,15 +74,11 @@ orgRoutes.post('/', authLimiter, async (req: Request, res: Response, next: NextF
 orgRoutes.get('/check-slug/:slug', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { slug } = req.params;
-
-        const existing = await prisma.organization.findUnique({
-            where: { slug: slug as string },
-            select: { id: true },
-        });
+        const available = await OrgService.isSlugAvailable(slug as string);
 
         res.json({
             success: true,
-            data: { available: !existing },
+            data: { available },
         });
     } catch (error) {
         next(error);
