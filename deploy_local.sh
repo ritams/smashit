@@ -9,7 +9,14 @@ echo "🚀 Starting Deployment Process..."
 
 # 1. Build Docker images
 echo "🏗️ Building WEB image..."
-docker build --platform linux/amd64 -t avith-web --build-arg APP_NAME=@avith/web .
+# Use the API URL provided in the script configuration or prompt for it
+if [ -z "$API_URL" ]; then
+    API_URL="https://api.avith.app" # Default or replace with your actual URL
+fi
+
+docker build --platform linux/amd64 -t avith-web \
+    --build-arg APP_NAME=@avith/web \
+    --build-arg NEXT_PUBLIC_API_URL=$API_URL .
 
 echo "🏗️ Building API image..."
 docker build --platform linux/amd64 -t avith-api --build-arg APP_NAME=@avith/api .
