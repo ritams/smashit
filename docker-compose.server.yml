@@ -31,7 +31,7 @@ services:
       - PORT=4000
       - DATABASE_URL=postgresql://avith:fyuhfhuisajr9348@postgres:5432/avith
       - REDIS_URL=redis://redis:6379
-      - CORS_ORIGIN
+      - CORS_ORIGIN=https://avith.app,https://api.avith.app
       - NEXTAUTH_SECRET=${AUTH_SECRET}
       - AUTH_SECRET
     depends_on:
