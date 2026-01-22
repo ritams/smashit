@@ -61,12 +61,12 @@ RUN --mount=type=bind,from=builder,source=/app,target=/builder \
             cp -r /builder/apps/web/public ./web-standalone/apps/web/public; \
         fi; \
     else \
-        mkdir -p apps/api packages/database && \
+        mkdir -p apps/api packages && \
         cp -r /builder/node_modules ./node_modules && \
         cp -r /builder/apps/api/node_modules ./apps/api/node_modules && \
         cp -r /builder/apps/api/dist ./apps/api/dist && \
         cp -r /builder/apps/api/package.json ./apps/api/package.json && \
-        cp -r /builder/packages/database ./packages/database; \
+        cp -r /builder/packages ./; \
     fi && \
     chown -R nextjs:nodejs .
 
