@@ -4,7 +4,18 @@
         "outDir": "./dist",
         "rootDir": "./src",
         "module": "NodeNext",
-        "moduleResolution": "NodeNext"
+        "moduleResolution": "NodeNext",
+        "paths": {
+            "@avith/database": [
+                "../../packages/database/src"
+            ],
+            "@avith/validators": [
+                "../../packages/validators/src"
+            ],
+            "@avith/types": [
+                "../../packages/types/src"
+            ]
+        }
     },
     "include": [
         "src/**/*"
