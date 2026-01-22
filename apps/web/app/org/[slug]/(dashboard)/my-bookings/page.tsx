@@ -93,9 +93,9 @@ export default function MyBookingsPage() {
     return (
         <div className="max-w-3xl mx-auto py-8">
             {/* Header */}
-            <div className="mb-10">
-                <h1 className="text-2xl font-medium tracking-tight">My Bookings</h1>
-                <p className="text-muted-foreground mt-1">
+            <div className="mb-12">
+                <h1 className="text-3xl font-medium tracking-tight font-display text-foreground/90">My Bookings</h1>
+                <p className="text-muted-foreground/70 mt-2 text-sm">
                     Manage your upcoming reservations
                 </p>
             </div>
@@ -122,43 +122,43 @@ export default function MyBookingsPage() {
                             <div
                                 key={booking.id}
                                 className={cn(
-                                    "group border rounded-lg p-5 transition-all",
+                                    "group border rounded-xl p-6 transition-all backdrop-blur-sm",
                                     isToday
-                                        ? "bg-primary/5 border-primary/20"
-                                        : "bg-background border-border hover:border-border/80"
+                                        ? "bg-primary/[0.03] border-primary/20 shadow-[0_4px_20px_-4px_rgba(var(--primary),0.05)]"
+                                        : "bg-card/50 border-border/40 hover:border-border/80 hover:bg-card/80"
                                 )}
                             >
                                 <div className="flex flex-col sm:flex-row gap-4 items-start justify-between w-full">
                                     <div className="space-y-2 flex-1 w-full">
-                                        <div className="flex items-center justify-between sm:justify-start gap-3">
-                                            <h3 className="font-medium text-lg">{booking.space.name}</h3>
+                                        <div className="flex items-center justify-between sm:justify-start gap-4">
+                                            <h3 className="font-display text-xl font-medium text-foreground/90">{booking.space.name}</h3>
                                             <div className="flex gap-2">
                                                 {isToday && (
-                                                    <span className="text-[10px] font-medium uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary text-primary-foreground">
+                                                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
                                                         Today
                                                     </span>
                                                 )}
                                                 {isTomorrow && (
-                                                    <span className="text-[10px] font-medium uppercase tracking-wider px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                                                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] px-3 py-1 rounded-full bg-muted/50 text-muted-foreground border border-border/40">
                                                         Tomorrow
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 text-sm text-muted-foreground/80">
                                             <div className="flex items-center gap-2">
-                                                <CalendarDays className="h-3.5 w-3.5" />
-                                                <span>{format(startDate, 'EEEE, MMM d')}</span>
+                                                <CalendarDays className="h-4 w-4 opacity-70" />
+                                                <span className="font-medium">{format(startDate, 'EEEE, MMM d')}</span>
                                             </div>
-                                            <span className="hidden sm:inline text-border">·</span>
+                                            <div className="hidden sm:block h-4 w-px bg-border/40" />
                                             <div className="flex items-center gap-2">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                <span>{formatTime(booking.startTime)} – {formatTime(booking.endTime)}</span>
+                                                <Clock className="h-4 w-4 opacity-70" />
+                                                <span className="font-medium">{formatTime(booking.startTime)} – {formatTime(booking.endTime)}</span>
                                             </div>
                                             {(booking.slot || booking.slotIndex !== undefined) && (
                                                 <>
-                                                    <span className="hidden sm:inline text-border">·</span>
-                                                    <span className="text-primary font-medium bg-primary/5 px-2 py-0.5 rounded text-xs">
+                                                    <div className="hidden sm:block h-4 w-px bg-border/40" />
+                                                    <span className="text-primary/90 font-semibold bg-primary/5 px-2.5 py-0.5 rounded-md text-xs uppercase tracking-wider">
                                                         {booking.slot?.name || `Slot ${(booking.slotIndex ?? 0) + 1}`}
                                                     </span>
                                                 </>
@@ -202,15 +202,18 @@ export default function MyBookingsPage() {
                                 return (
                                     <div
                                         key={booking.id}
-                                        className="border border-border/50 rounded-lg p-4 bg-muted/30"
+                                        className="border border-border/30 rounded-xl p-5 bg-card/30 hover:bg-card/50 transition-colors group"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4 text-sm">
-                                                <span className="font-medium text-muted-foreground">{booking.space.name}</span>
-                                                <span className="text-muted-foreground/60">{format(startDate, 'MMM d, yyyy')}</span>
-                                                <span className="text-muted-foreground/60">{formatTime(booking.startTime)}</span>
+                                            <div className="flex items-center gap-6">
+                                                <span className="font-display text-base font-medium text-foreground/70 group-hover:text-foreground/90 transition-colors">{booking.space.name}</span>
+                                                <div className="h-4 w-px bg-border/40" />
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground/60">
+                                                    <span>{format(startDate, 'MMM d, yyyy')}</span>
+                                                    <span>{formatTime(booking.startTime)}</span>
+                                                </div>
                                             </div>
-                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/40">
                                                 Completed
                                             </span>
                                         </div>

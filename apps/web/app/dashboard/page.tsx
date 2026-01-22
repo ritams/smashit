@@ -80,9 +80,9 @@ export default function DashboardPage() {
             <header className="border-b border-border">
                 <div className="container py-4">
                     <nav className="flex items-center justify-between">
-                        <Link href="/dashboard" className="group">
-                            <span className="text-xl font-medium tracking-tight">
-                                avith
+                        <Link href="/" className="group">
+                            <span className="font-display text-2xl font-medium tracking-tight text-foreground transition-colors">
+                                Avith
                             </span>
                         </Link>
                         <div className="flex items-center gap-4">
@@ -126,32 +126,32 @@ export default function DashboardPage() {
             <main className="container py-10">
                 <div className="max-w-3xl mx-auto space-y-8">
                     {/* Welcome */}
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-medium">
+                    <div className="space-y-4 pt-4">
+                        <h1 className="font-display text-4xl font-medium tracking-tight">
                             Welcome, {session.user?.name?.split(' ')[0]}
                         </h1>
-                        <p className="text-muted-foreground">
-                            Manage your organizations and bookings
+                        <p className="text-lg text-muted-foreground font-light">
+                            Manage your organizations and bespoke booking systems
                         </p>
                     </div>
 
                     {/* Organizations */}
-                    <Card className="border border-border">
-                        <CardHeader className="pb-4">
+                    <Card className="border border-border/60 shadow-sm bg-card/30 backdrop-blur-[2px] rounded-xl overflow-hidden">
+                        <CardHeader className="pb-6 pt-8 px-8 border-b border-border/40">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2 text-base font-medium">
-                                    <Building2 className="h-4 w-4" />
+                                <CardTitle className="flex items-center gap-3 text-lg font-medium tracking-tight">
+                                    <Building2 className="h-5 w-5 text-muted-foreground/70" />
                                     Your organizations
                                 </CardTitle>
                                 <Link href="/create-org">
-                                    <Button size="sm" variant="outline">
+                                    <Button size="sm" variant="outline" className="h-10 px-6 font-medium transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary">
                                         <PlusCircle className="h-4 w-4 mr-2" />
-                                        Create
+                                        Create New
                                     </Button>
                                 </Link>
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-8">
                             {loading ? (
                                 <div className="space-y-3">
                                     <Skeleton className="h-14" />
@@ -168,21 +168,21 @@ export default function DashboardPage() {
                                     {orgs.map((org) => (
                                         <div
                                             key={org.id}
-                                            className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                                            className="flex items-center justify-between p-6 rounded-xl border border-border/40 hover:border-border hover:bg-muted/30 transition-all group"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                                                    <Building2 className="h-4 w-4 text-primary" />
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10 transition-colors group-hover:bg-primary/10">
+                                                    <Building2 className="h-5 w-5 text-primary" />
                                                 </div>
-                                                <div>
-                                                    <p className="font-medium text-sm">{org.name}</p>
-                                                    <p className="text-xs text-muted-foreground">
+                                                <div className="space-y-1">
+                                                    <p className="font-medium text-base tracking-tight">{org.name}</p>
+                                                    <p className="text-xs text-muted-foreground/80 font-medium tracking-wide">
                                                         /org/{org.slug} •{' '}
                                                         <span
                                                             className={
                                                                 org.role === 'ADMIN'
-                                                                    ? 'text-primary font-medium'
-                                                                    : ''
+                                                                    ? 'text-primary/80 uppercase'
+                                                                    : 'uppercase'
                                                             }
                                                         >
                                                             {org.role}
@@ -190,18 +190,18 @@ export default function DashboardPage() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-3">
                                                 {org.role === 'ADMIN' && (
                                                     <Link href={`/org/${org.slug}/admin`}>
-                                                        <Button variant="ghost" size="sm">
-                                                            <Settings className="h-4 w-4" />
+                                                        <Button variant="ghost" size="sm" className="h-10 w-10 p-0 rounded-lg hover:bg-muted transition-colors">
+                                                            <Settings className="h-4 w-4 text-muted-foreground" />
                                                         </Button>
                                                     </Link>
                                                 )}
                                                 <Link href={`/org/${org.slug}/book`}>
-                                                    <Button size="sm">
+                                                    <Button size="sm" className="h-10 px-6 font-medium bg-primary hover:scale-[1.02] active:scale-[0.98] transition-all">
                                                         <Calendar className="h-4 w-4 mr-2" />
-                                                        Book
+                                                        Book Space
                                                     </Button>
                                                 </Link>
                                             </div>

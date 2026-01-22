@@ -57,7 +57,7 @@ export default function DashboardLayout({
                 <div className="container flex h-14 items-center justify-between">
                     <div className="flex items-center gap-8">
                         <Link href={`/org/${orgSlug}/book`} className="group">
-                            <span className="font-display text-lg font-medium tracking-tight">
+                            <span className="font-display text-xl font-medium tracking-tight text-foreground/90 transition-colors group-hover:text-primary">
                                 Avith
                             </span>
                         </Link>
@@ -65,7 +65,7 @@ export default function DashboardLayout({
                             <Link
                                 href={`/org/${orgSlug}/book`}
                                 className={cn(
-                                    "text-sm font-medium transition-colors px-3 py-2 rounded-md",
+                                    "text-[13px] font-medium transition-colors px-1 py-1",
                                     pathname?.includes('/book')
                                         ? "text-primary"
                                         : "text-muted-foreground hover:text-foreground"
@@ -76,7 +76,7 @@ export default function DashboardLayout({
                             <Link
                                 href={`/org/${orgSlug}/my-bookings`}
                                 className={cn(
-                                    "text-sm font-medium transition-colors px-3 py-2 rounded-md",
+                                    "text-[13px] font-medium transition-colors px-1 py-1",
                                     pathname?.includes('/my-bookings')
                                         ? "text-primary"
                                         : "text-muted-foreground hover:text-foreground"

@@ -69,42 +69,42 @@ export default function OrgLoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
             {/* Ambient Background */}
-            <div className="absolute inset-0 w-full h-full">
-                <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
-                <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
+            <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-primary/[0.02] blur-[100px] pointer-events-none" />
             </div>
 
             <div className="w-full max-w-sm space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* Logo and Title */}
-                <div className="text-center space-y-4">
-                    <div className="flex justify-center mb-6">
-                        <span className="text-2xl font-medium tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-                            avith
+                <div className="text-center space-y-8">
+                    <div className="flex justify-center">
+                        <span className="font-display text-2xl font-medium tracking-tight text-foreground/80">
+                            Avith
                         </span>
                     </div>
-                    <div className="space-y-2">
-                        <h1 className="text-3xl font-semibold tracking-tight">
+                    <div className="space-y-3">
+                        <h1 className="font-display text-4xl font-medium tracking-tight text-foreground">
                             {orgName || 'Loading...'}
                         </h1>
-                        <p className="text-muted-foreground text-sm">
+                        <p className="text-muted-foreground text-lg font-light">
                             Sign in to reserve your space
                         </p>
                     </div>
                 </div>
 
                 {/* Login Card */}
-                <Card className="border-border/50 bg-background/60 backdrop-blur-xl shadow-xl shadow-primary/5">
-                    <CardHeader className="text-center pb-2">
-                        <CardTitle className="text-lg font-medium">Welcome</CardTitle>
-                        <CardDescription className="text-sm">
+                <Card className="border-border/60 bg-card/30 backdrop-blur-[2px] shadow-sm rounded-xl overflow-hidden py-4">
+                    <CardHeader className="text-center pb-4">
+                        <CardTitle className="text-lg font-medium tracking-tight">Welcome</CardTitle>
+                        <CardDescription className="text-muted-foreground/70 font-light">
                             Continue with your account
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4 pt-6">
+                    <CardContent className="space-y-6 pt-4 px-8 pb-8">
                         <Button
                             onClick={() => signIn('google', { callbackUrl: `/org/${orgSlug}/book` })}
                             variant="outline"
-                            className="w-full h-11 text-sm gap-3 border-border hover:bg-background hover:text-foreground transition-all duration-300 hover:shadow-md hover:border-primary/20"
+                            className="w-full h-12 text-sm gap-3 border-border/60 font-medium transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:border-primary hover:scale-[1.01]"
                             size="lg"
                         >
                             <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -128,9 +128,13 @@ export default function OrgLoginPage() {
                             Continue with Google
                         </Button>
 
-                        <p className="text-center text-[10px] text-muted-foreground/60 uppercase tracking-widest pt-2">
-                            Secure Access
-                        </p>
+                        <div className="flex items-center gap-4 py-2">
+                            <div className="h-px w-full bg-border/40" />
+                            <span className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.2em] font-medium whitespace-nowrap">
+                                Secure Access
+                            </span>
+                            <div className="h-px w-full bg-border/40" />
+                        </div>
                     </CardContent>
                 </Card>
             </div>

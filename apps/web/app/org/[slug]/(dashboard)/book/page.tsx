@@ -392,7 +392,7 @@ export default function BookPage() {
                                             className={cn(
                                                 'flex flex-col items-center justify-center w-10 h-10 rounded-full transition-all relative mx-0.5',
                                                 isSelected
-                                                    ? 'bg-foreground text-background font-medium'
+                                                    ? 'bg-primary/5 text-primary border border-primary/20 font-medium'
                                                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                                             )}
                                         >
@@ -420,7 +420,7 @@ export default function BookPage() {
 
                         <Popover>
                             <PopoverTrigger asChild>
-                                <button className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                                <button className="font-display text-lg font-medium text-foreground tracking-tight hover:text-primary transition-colors">
                                     {format(selectedDate, 'MMMM yyyy')}
                                 </button>
                             </PopoverTrigger>
@@ -548,41 +548,41 @@ export default function BookPage() {
             {/* Booking Dialog */}
             <Dialog open={!!bookingInfo} onOpenChange={() => setBookingInfo(null)}>
                 <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Confirm Booking</DialogTitle>
-                        <DialogDescription>
+                    <DialogHeader className="space-y-3 pb-2">
+                        <DialogTitle className="font-display text-2xl font-medium text-foreground/90">Confirm Booking</DialogTitle>
+                        <DialogDescription className="text-muted-foreground/70">
                             Review your reservation details.
                         </DialogDescription>
                     </DialogHeader>
                     {bookingInfo && selectedSpace && (
-                        <div className="py-4 space-y-3">
-                            <div className="flex justify-between py-2 border-b">
-                                <span className="text-muted-foreground">Space</span>
-                                <span className="font-medium">{selectedSpace.name}</span>
+                        <div className="py-2">
+                            <div className="flex justify-between py-3 border-b border-border/40">
+                                <span className="text-sm text-muted-foreground/70 font-medium uppercase tracking-wider">Space</span>
+                                <span className="font-medium text-foreground/90">{selectedSpace.name}</span>
                             </div>
-                            <div className="flex justify-between py-2 border-b">
-                                <span className="text-muted-foreground">Date</span>
-                                <span className="font-medium">{format(bookingInfo.slot.startTime, 'EEEE, MMM d')}</span>
+                            <div className="flex justify-between py-3 border-b border-border/40">
+                                <span className="text-sm text-muted-foreground/70 font-medium uppercase tracking-wider">Date</span>
+                                <span className="font-medium text-foreground/90">{format(bookingInfo.slot.startTime, 'EEEE, MMM d')}</span>
                             </div>
-                            <div className="flex justify-between py-2 border-b">
-                                <span className="text-muted-foreground">Time</span>
-                                <span className="font-medium">{format(bookingInfo.slot.startTime, 'h:mm a')} – {format(bookingInfo.slot.endTime, 'h:mm a')}</span>
+                            <div className="flex justify-between py-3 border-b border-border/40">
+                                <span className="text-sm text-muted-foreground/70 font-medium uppercase tracking-wider">Time</span>
+                                <span className="font-medium text-foreground/90">{format(bookingInfo.slot.startTime, 'h:mm a')} – {format(bookingInfo.slot.endTime, 'h:mm a')}</span>
                             </div>
-                            <div className="flex justify-between py-2">
-                                <span className="text-muted-foreground">Slot</span>
-                                <span className="font-medium text-primary">{bookingInfo.slotName}</span>
+                            <div className="flex justify-between py-3">
+                                <span className="text-sm text-muted-foreground/70 font-medium uppercase tracking-wider">Slot</span>
+                                <span className="font-semibold text-primary/80">{bookingInfo.slotName}</span>
                             </div>
 
                             {/* Recurrence Options (Admin Only) */}
                             {isAdmin && (
-                                <div className="space-y-3 pt-3 border-t">
+                                <div className="space-y-4 pt-4 mt-2 border-t border-border/60">
                                     <div className="flex items-center gap-2">
-                                        <Repeat className="h-4 w-4 text-muted-foreground" />
-                                        <Label className="text-sm font-medium">Recurrence</Label>
+                                        <Repeat className="h-4 w-4 text-muted-foreground/60" />
+                                        <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Recurrence</Label>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <Select value={recurrence} onValueChange={(v: any) => setRecurrence(v)}>
-                                            <SelectTrigger className="h-8">
+                                            <SelectTrigger className="h-10 border-border/40 bg-muted/5 focus:ring-primary/20">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -591,19 +591,18 @@ export default function BookPage() {
                                                 <SelectItem value="WEEKLY">Weekly</SelectItem>
                                             </SelectContent>
                                         </Select>
-
                                         {recurrence !== 'NONE' && (
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-3">
                                                 <Input
                                                     type="number"
                                                     value={recurrenceCount}
                                                     onChange={(e) => setRecurrenceCount(e.target.value)}
-                                                    className="h-8"
+                                                    className="h-10 border-border/40 bg-muted/5 focus:ring-primary/20"
                                                     min={2}
                                                     max={52}
                                                     placeholder="Count"
                                                 />
-                                                <span className="text-xs text-muted-foreground whitespace-nowrap">times</span>
+                                                <span className="text-xs font-medium text-muted-foreground/60 whitespace-nowrap uppercase tracking-wider">times</span>
                                             </div>
                                         )}
                                     </div>
@@ -611,9 +610,9 @@ export default function BookPage() {
                             )}
                         </div>
                     )}
-                    <DialogFooter className="gap-2">
-                        <Button variant="ghost" onClick={() => setBookingInfo(null)}>Cancel</Button>
-                        <Button onClick={handleBook} disabled={isBooking}>
+                    <DialogFooter className="pt-6 sm:justify-end gap-3">
+                        <Button variant="outline" className="h-11 px-8 rounded-lg border-border/60 hover:bg-muted/50 transition-colors" onClick={() => setBookingInfo(null)}>Cancel</Button>
+                        <Button className="h-11 px-10 rounded-lg shadow-[0_4px_12px_-4px_rgba(var(--primary),0.3)] hover:shadow-[0_6px_16px_-4px_rgba(var(--primary),0.4)] transition-all" onClick={handleBook} disabled={isBooking}>
                             {isBooking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Confirm
                         </Button>
@@ -624,38 +623,38 @@ export default function BookPage() {
             {/* Cancel Dialog */}
             <Dialog open={!!cancelInfo} onOpenChange={() => setCancelInfo(null)}>
                 <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Cancel this booking?</DialogTitle>
-                        <DialogDescription>
+                    <DialogHeader className="space-y-3 pb-2">
+                        <DialogTitle className="font-display text-2xl font-medium text-foreground/90">Cancel this booking?</DialogTitle>
+                        <DialogDescription className="text-muted-foreground/70">
                             The slot will become available for other members.
                         </DialogDescription>
                     </DialogHeader>
                     {cancelInfo && selectedSpace && (
-                        <div className="py-4 space-y-3">
-                            <div className="flex justify-between py-2 border-b border-border">
-                                <span className="text-muted-foreground">Space</span>
-                                <span className="font-medium">{selectedSpace.name}</span>
+                        <div className="py-2">
+                            <div className="flex justify-between py-3 border-b border-border/40">
+                                <span className="text-sm text-muted-foreground/70 font-medium uppercase tracking-wider">Space</span>
+                                <span className="font-medium text-foreground/90">{selectedSpace.name}</span>
                             </div>
-                            <div className="flex justify-between py-2 border-b border-border">
-                                <span className="text-muted-foreground">Date</span>
-                                <span className="font-medium">{format(cancelInfo.slot.startTime, 'EEEE, MMM d')}</span>
+                            <div className="flex justify-between py-3 border-b border-border/40">
+                                <span className="text-sm text-muted-foreground/70 font-medium uppercase tracking-wider">Date</span>
+                                <span className="font-medium text-foreground/90">{format(cancelInfo.slot.startTime, 'EEEE, MMM d')}</span>
                             </div>
-                            <div className="flex justify-between py-2">
-                                <span className="text-muted-foreground">Time</span>
-                                <span className="font-medium">{format(cancelInfo.slot.startTime, 'h:mm a')} – {format(cancelInfo.slot.endTime, 'h:mm a')}</span>
+                            <div className="flex justify-between py-3">
+                                <span className="text-sm text-muted-foreground/70 font-medium uppercase tracking-wider">Time</span>
+                                <span className="font-medium text-primary/80">{format(cancelInfo.slot.startTime, 'h:mm a')} – {format(cancelInfo.slot.endTime, 'h:mm a')}</span>
                             </div>
                         </div>
                     )}
-                    <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setCancelInfo(null)}>Keep booking</Button>
+                    <DialogFooter className="pt-8 sm:justify-end gap-3 text-center sm:text-left">
+                        <Button variant="outline" className="h-11 px-8 rounded-lg border-border/60 hover:bg-muted/50 transition-colors" onClick={() => setCancelInfo(null)}>Keep booking</Button>
                         <Button
                             variant="ghost"
                             onClick={handleCancel}
                             disabled={isCanceling}
-                            className="text-muted-foreground hover:text-foreground"
+                            className="h-11 px-8 rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/[0.03] transition-colors"
                         >
                             {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Cancel
+                            Cancel Appointment
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -216,11 +216,12 @@ export function AllSpacesView({
                                         key={group.space.id}
                                         colSpan={group.colSpan}
                                         className={cn(
-                                            "px-2 py-2 text-left bg-muted/50",
-                                            i > 0 && "border-l-[4px] border-border" // Obvious divider
+                                            "px-2 py-3 text-center border-b border-border/40 transition-colors",
+                                            i % 2 === 0 ? "bg-muted/10" : "bg-background",
+                                            i > 0 && "border-l-[2px] border-primary/20"
                                         )}
                                     >
-                                        <span className="font-medium text-sm">{group.space.name}</span>
+                                        <span className="font-display text-base font-medium tracking-tight text-foreground/90">{group.space.name}</span>
                                     </th>
                                 ))}
                             </tr>
@@ -229,15 +230,17 @@ export function AllSpacesView({
                                 <th className="sticky left-0 z-30 bg-muted/50 border-r"></th>
                                 {columns.map((col, i) => {
                                     const isFirstOfSpace = i === 0 || columns[i - 1].space.id !== col.space.id;
+                                    const spaceGroupIdx = filteredData.findIndex(d => d.space.id === col.space.id);
                                     return (
                                         <th
                                             key={`${col.space.id}-${col.subSlot.id}`}
                                             className={cn(
-                                                "px-1 py-1.5 text-center min-w-[60px]",
-                                                isFirstOfSpace && i > 0 && "border-l-[4px] border-border"
+                                                "px-1 py-2 text-center min-w-[70px] border-b border-border/40 transition-colors",
+                                                spaceGroupIdx % 2 === 0 ? "bg-muted/10" : "bg-background",
+                                                isFirstOfSpace && i > 0 && "border-l-[2px] border-primary/20"
                                             )}
                                         >
-                                            <span className="text-xs text-muted-foreground">{col.subSlot.name}</span>
+                                            <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest">{col.subSlot.name}</span>
                                         </th>
                                     );
                                 })}
@@ -296,11 +299,12 @@ export function AllSpacesView({
                                                 <td
                                                     key={`${col.space.id}-${col.subSlot.id}-${rowHour}`}
                                                     className={cn(
-                                                        "p-1",
-                                                        isFirstOfSpace && colIdx > 0 && "border-l-[4px] border-border"
+                                                        "p-1 transition-colors",
+                                                        filteredData.findIndex(d => d.space.id === col.space.id) % 2 === 0 ? "bg-muted/10" : "bg-background",
+                                                        isFirstOfSpace && colIdx > 0 && "border-l-[2px] border-primary/20"
                                                     )}
                                                 >
-                                                    <Tooltip>
+                                                    <Tooltip delayDuration={0}>
                                                         <TooltipTrigger asChild>
                                                             <button
                                                                 disabled={isDisabled || (!!booked && !isMine)}
@@ -346,16 +350,30 @@ export function AllSpacesView({
                                                                 ) : null}
                                                             </button>
                                                         </TooltipTrigger>
-                                                        <TooltipContent side="top" className="text-xs">
-                                                            {booked
-                                                                ? isMine
-                                                                    ? 'Click to cancel'
-                                                                    : booked.userName
-                                                                : isPast
-                                                                    ? 'Past'
-                                                                    : isTooFarAhead
-                                                                        ? `Available ${maxAdvanceDays}d ahead`
-                                                                        : 'Book'}
+                                                        <TooltipContent side="top" className="p-0 border-none bg-transparent shadow-none" sideOffset={10}>
+                                                            <div className="bg-card border border-border/60 shadow-xl rounded-xl p-4 min-w-[180px] backdrop-blur-md">
+                                                                <div className="space-y-3">
+                                                                    <div className="space-y-1">
+                                                                        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold leading-none">
+                                                                            {col.space.name}
+                                                                        </div>
+                                                                        <div className="text-sm uppercase tracking-widest text-primary font-bold">
+                                                                            {col.subSlot.name}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="h-px w-full bg-border/40" />
+                                                                    <div className="space-y-1">
+                                                                        <div className="text-base font-medium text-foreground tracking-tight">
+                                                                            {format(slotStartTime, 'h:mm a')} – {format(new Date(slot.endTime), 'h:mm a')}
+                                                                        </div>
+                                                                        <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                                                            {booked
+                                                                                ? (isMine ? 'Your Reservation' : `Booked by ${booked.userName}`)
+                                                                                : (isPast ? 'Reservations closed' : 'Available for booking')}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </td>

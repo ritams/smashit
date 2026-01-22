@@ -91,7 +91,7 @@ export const api = {
         apiClient<any>(`/api/orgs/${orgSlug}/spaces/all/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`, { auth: true }),
 
     // Bookings (all authenticated)
-    createBooking: (orgSlug: string, data: { spaceId: string; startTime: string; endTime: string; slotId?: string; slotIndex?: number }) =>
+    createBooking: (orgSlug: string, data: { spaceId: string; startTime: string; endTime: string; slotId?: string; slotIndex?: number; recurrence?: string; recurrenceCount?: number }) =>
         apiClient<any>(`/api/orgs/${orgSlug}/bookings`, { method: 'POST', body: JSON.stringify(data), auth: true }),
     cancelBooking: (orgSlug: string, bookingId: string) =>
         apiClient<any>(`/api/orgs/${orgSlug}/bookings/${bookingId}`, { method: 'DELETE', auth: true }),
