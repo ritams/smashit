@@ -2,7 +2,7 @@
 
 import { usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Grid, Ticket, User, Shield } from 'lucide-react';
+import { Grid, Ticket, User, Shield, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
@@ -12,6 +12,12 @@ export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
 
     const navItems = [
         {
+            href: `/org/${orgSlug}/facilities`,
+            label: 'Facilities',
+            icon: MapPin,
+            isActive: (path: string) => path.includes('/facilities')
+        },
+        {
             href: `/org/${orgSlug}/book`,
             label: 'Book',
             icon: Grid,
@@ -19,7 +25,7 @@ export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
         },
         {
             href: `/org/${orgSlug}/my-bookings`,
-            label: 'My Bookings',
+            label: 'Bookings',
             icon: Ticket,
             isActive: (path: string) => path.includes('/my-bookings')
         },

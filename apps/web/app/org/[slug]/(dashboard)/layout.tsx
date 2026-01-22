@@ -50,11 +50,22 @@ export default function DashboardLayout({
                                 Avith
                             </span>
                         </Link>
-                        <nav className="hidden md:flex items-center gap-1">
+                        <nav className="hidden md:flex items-center gap-3">
+                            <Link
+                                href={`/org/${orgSlug}/facilities`}
+                                className={cn(
+                                    "text-[13px] font-medium transition-colors px-2 py-1",
+                                    pathname?.includes('/facilities')
+                                        ? "text-primary"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Facilities
+                            </Link>
                             <Link
                                 href={`/org/${orgSlug}/book`}
                                 className={cn(
-                                    "text-[13px] font-medium transition-colors px-1 py-1",
+                                    "text-[13px] font-medium transition-colors px-2 py-1",
                                     pathname?.includes('/book')
                                         ? "text-primary"
                                         : "text-muted-foreground hover:text-foreground"
@@ -65,7 +76,7 @@ export default function DashboardLayout({
                             <Link
                                 href={`/org/${orgSlug}/my-bookings`}
                                 className={cn(
-                                    "text-[13px] font-medium transition-colors px-1 py-1",
+                                    "text-[13px] font-medium transition-colors px-2 py-1",
                                     pathname?.includes('/my-bookings')
                                         ? "text-primary"
                                         : "text-muted-foreground hover:text-foreground"
