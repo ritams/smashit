@@ -12,5 +12,16 @@
     "exclude": [
         "node_modules",
         "dist"
+    ],
+    "references": [
+        {
+            "path": "../../packages/database"
+        },
+        {
+            "path": "../../packages/validators"
+        },
+        {
+            "path": "../../packages/types"
+        }
     ]
 }

@@ -62,7 +62,7 @@ spaceRoutes.get('/all/availability', async (req: OrgRequest, res, next) => {
             }
         });
 
-        const results = (await Promise.all(availabilityPromises)).filter((r): r is NonNullable<typeof r> => r !== null);
+        const results = (await Promise.all(availabilityPromises)).filter((r: any): r is NonNullable<typeof r> => r !== null);
 
         res.json({
             success: true,
