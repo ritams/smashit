@@ -23,6 +23,9 @@ export interface BookingRules {
     maxDurationMin: number;
     allowRecurring: boolean;
     bufferMinutes: number;
+    maxBookingsPerUserPerDay?: number | null;
+    maxTotalBookingsPerDay?: number | null;
+    maxActiveBookingsPerUser?: number | null;
 }
 
 export interface CreateSpaceInput {

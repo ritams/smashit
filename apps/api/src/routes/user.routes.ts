@@ -1,32 +1,68 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
+import { updateUserProfileSchema } from '@avith/validators';
+import { createError } from '../middleware/error.middleware.js';
+import { verifySessionToken, extractBearerToken } from '../lib/jwt.js';
+import { findOrCreateUser } from '../services/user.service.js';
+import { authLimiter, createLogger } from '../lib/core.js';
 
-export const userRoutes = Router();
+const log = createLogger('UserRoutes');
 
-// Get current user's organizations (memberships)
-userRoutes.get('/me/orgs', async (req: Request, res: Response, next: NextFunction) => {
+export const userRoutes: Router = Router();
+
+interface AuthenticatedRequest extends Request {
+    userId?: string;
+    userEmail?: string;
+}
+
+/**
+ * JWT-based auth middleware for user routes (no org context)
+ */
+async function jwtAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    const token = extractBearerToken(req.headers.authorization);
+
+    if (!token) {
+        log.warn('No token provided', { path: req.path });
+        return res.status(401).json({
+            success: false,
+            error: { code: 'UNAUTHORIZED', message: 'Valid token required' },
+        });
+    }
+
+    const jwtUser = await verifySessionToken(token);
+    if (!jwtUser) {
+        return res.status(401).json({
+            success: false,
+            error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        });
+    }
+
+    // Ensure user exists in database
+    const user = await findOrCreateUser({
+        email: jwtUser.email,
+        name: jwtUser.name,
+        googleId: jwtUser.sub,
+        avatarUrl: jwtUser.picture,
+    });
+
+    req.userId = user.id;
+    req.userEmail = user.email;
+    next();
+}
+
+// Apply auth middleware and rate limiting
+userRoutes.use(authLimiter);
+userRoutes.use(jwtAuth);
+
+// Get current user's organizations
+userRoutes.get('/me/orgs', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const userEmail = req.headers['x-user-email'] as string;
-
-        if (!userEmail) {
-            return res.status(401).json({
-                success: false,
-                error: { code: 'UNAUTHORIZED', message: 'Not logged in' },
-            });
-        }
-
         const user = await prisma.user.findUnique({
-            where: { email: userEmail },
+            where: { id: req.userId },
             include: {
                 memberships: {
                     include: {
-                        org: {
-                            select: {
-                                id: true,
-                                name: true,
-                                slug: true,
-                            },
-                        },
+                        org: { select: { id: true, name: true, slug: true } },
                     },
                     orderBy: { createdAt: 'desc' },
                 },
@@ -51,19 +87,10 @@ userRoutes.get('/me/orgs', async (req: Request, res: Response, next: NextFunctio
 });
 
 // Get current user's profile
-userRoutes.get('/me', async (req: Request, res: Response, next: NextFunction) => {
+userRoutes.get('/me', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const userEmail = req.headers['x-user-email'] as string;
-
-        if (!userEmail) {
-            return res.status(401).json({
-                success: false,
-                error: { code: 'UNAUTHORIZED', message: 'Not logged in' },
-            });
-        }
-
         const user = await prisma.user.findUnique({
-            where: { email: userEmail },
+            where: { id: req.userId },
             select: {
                 id: true,
                 email: true,
@@ -74,13 +101,7 @@ userRoutes.get('/me', async (req: Request, res: Response, next: NextFunction) =>
                 createdAt: true,
                 memberships: {
                     include: {
-                        org: {
-                            select: {
-                                id: true,
-                                name: true,
-                                slug: true,
-                            },
-                        },
+                        org: { select: { id: true, name: true, slug: true } },
                     },
                     orderBy: { createdAt: 'desc' },
                 },
@@ -94,7 +115,6 @@ userRoutes.get('/me', async (req: Request, res: Response, next: NextFunction) =>
             });
         }
 
-        // Flatten memberships for easier consumption
         const profile = {
             ...user,
             organizations: user.memberships.map((m) => ({
@@ -112,20 +132,12 @@ userRoutes.get('/me', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // Update current user's profile
-userRoutes.patch('/me', async (req: Request, res: Response, next: NextFunction) => {
+userRoutes.patch('/me', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const userEmail = req.headers['x-user-email'] as string;
-        const { name, phoneNumber, registrationId } = req.body;
-
-        if (!userEmail) {
-            return res.status(401).json({
-                success: false,
-                error: { code: 'UNAUTHORIZED', message: 'Not logged in' },
-            });
-        }
+        const { name, phoneNumber, registrationId } = updateUserProfileSchema.parse(req.body);
 
         const updatedUser = await prisma.user.update({
-            where: { email: userEmail },
+            where: { id: req.userId },
             data: {
                 ...(name && { name }),
                 ...(phoneNumber !== undefined && { phoneNumber }),
@@ -146,3 +158,5 @@ userRoutes.patch('/me', async (req: Request, res: Response, next: NextFunction) 
         next(error);
     }
 });
+
+

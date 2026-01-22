@@ -1,89 +1,58 @@
-import { Router } from 'express';
-import { prisma } from '@smashit/database';
-import { createBookingSchema } from '@smashit/validators';
+import { Router, IRouter } from 'express';
+import { createBookingSchema } from '@avith/validators';
 import { orgMiddleware } from '../middleware/org.middleware.js';
-import { authMiddleware, AuthRequest } from '../middleware/auth.middleware.js';
+import { authMiddleware, ensureOrgAccess, AuthRequest } from '../middleware/auth.middleware.js';
 import { bookingQueue, bookingQueueEvents } from '../lib/queue.js';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
+import { bookingLimiter } from '../lib/core.js';
+import * as BookingService from '../services/booking.service.js';
 
-export const bookingRoutes = Router({ mergeParams: true });
+/**
+ * Booking routes - all require authentication and org access
+ */
+export const bookingRoutes: IRouter = Router({ mergeParams: true });
 
 // Apply middleware
 bookingRoutes.use(orgMiddleware);
 bookingRoutes.use(authMiddleware);
+bookingRoutes.use(ensureOrgAccess);
 
 // Get bookings for a space on a date
 bookingRoutes.get('/', async (req: AuthRequest, res, next) => {
     try {
         const { spaceId, date, userId } = req.query;
-
-        const where: any = {
-            space: { orgId: req.org!.id },
-            status: 'CONFIRMED',
-        };
-
-        if (spaceId) where.spaceId = spaceId;
-        if (userId) where.userId = userId;
-        if (date && typeof date === 'string') {
-            const dayStart = new Date(`${date}T00:00:00.000Z`);
-            const dayEnd = new Date(`${date}T23:59:59.999Z`);
-            where.startTime = { gte: dayStart };
-            where.endTime = { lte: dayEnd };
-        }
-
-        const bookings = await prisma.booking.findMany({
-            where,
-            include: {
-                space: { select: { id: true, name: true } },
-                user: { select: { id: true, name: true, avatarUrl: true, email: true } },
-            },
-            orderBy: { startTime: 'asc' },
+        const bookings = await BookingService.getBookings({
+            orgId: req.org!.id,
+            spaceId: spaceId as string | undefined,
+            userId: userId as string | undefined,
+            date: date as string | undefined,
         });
-
         res.json({ success: true, data: bookings });
     } catch (error) {
         next(error);
     }
 });
 
-// Get current user's bookings (all bookings - frontend handles past/future separation)
+// Get current user's bookings
 bookingRoutes.get('/my', async (req: AuthRequest, res, next) => {
     try {
-        const bookings = await prisma.booking.findMany({
-            where: {
-                userId: req.user!.id,
-                space: { orgId: req.org!.id },
-                status: { in: ['PENDING', 'CONFIRMED'] },
-            },
-            include: {
-                space: { select: { id: true, name: true } },
-                slot: { select: { id: true, name: true, number: true } },
-            },
-            orderBy: { startTime: 'desc' },
+        const bookings = await BookingService.getUserBookings({
+            userId: req.user!.id,
+            orgId: req.org!.id,
         });
-
         res.json({ success: true, data: bookings });
     } catch (error) {
         next(error);
     }
 });
 
-
-// Create a booking (via queue)
-bookingRoutes.post('/', async (req: AuthRequest, res, next) => {
+// Create a booking (via queue) - rate limited
+bookingRoutes.post('/', bookingLimiter, async (req: AuthRequest, res, next) => {
     try {
         const data = createBookingSchema.parse(req.body);
 
         // Verify space belongs to org
-        const space = await prisma.space.findFirst({
-            where: {
-                id: data.spaceId,
-                orgId: req.org!.id,
-                isActive: true,
-            },
-            include: { rules: true },
-        });
-
+        const space = await BookingService.verifySpaceOwnership(data.spaceId, req.org!.id);
         if (!space) {
             return res.status(404).json({
                 success: false,
@@ -91,8 +60,28 @@ bookingRoutes.post('/', async (req: AuthRequest, res, next) => {
             });
         }
 
-        // Add to queue for processing
-        const job = await bookingQueue.add('create-booking', {
+        const isAdmin = req.membership?.role === 'ADMIN';
+
+        // Handle recurring bookings (Admin only)
+        if (data.recurrence && data.recurrence !== 'NONE') {
+            if (!isAdmin) {
+                return res.status(403).json({
+                    success: false,
+                    error: { code: 'FORBIDDEN', message: 'Only admins can create recurring bookings' },
+                });
+            }
+
+            const jobs = buildRecurringJobs(data, req.user!, req.org!.id, isAdmin);
+            await (bookingQueue as any).addBulk(jobs.map(j => ({ name: 'create-booking', data: j.data })));
+            return res.status(201).json({
+                success: true,
+                message: `Created ${jobs.length} recurring bookings`,
+                recurrenceGroupId: jobs[0]?.data.recurrenceGroupId
+            });
+        }
+
+        // Single booking
+        const job = await (bookingQueue as any).add('create-booking', {
             spaceId: data.spaceId,
             userId: req.user!.id,
             userName: req.user!.name,
@@ -101,31 +90,20 @@ bookingRoutes.post('/', async (req: AuthRequest, res, next) => {
             participants: data.participants || [],
             notes: data.notes,
             slotIndex: data.slotIndex,
-            slotId: data.slotId, // Pass slotId
+            slotId: data.slotId,
             orgId: req.org!.id,
+            isAdmin,
         });
 
-        // Wait for job to complete (with timeout)
         try {
             const result = await job.waitUntilFinished(bookingQueueEvents, 10000);
             res.status(201).json({ success: true, data: result });
         } catch (err: any) {
-            const errorMessages: Record<string, { code: string; message: string; status: number }> = {
-                'SLOT_ALREADY_BOOKED': { code: 'SLOT_TAKEN', message: 'This slot has already been booked', status: 409 },
-                'BOOKING_TOO_FAR_AHEAD': { code: 'BOOKING_TOO_FAR_AHEAD', message: 'Cannot book this far in advance', status: 400 },
-                'BOOKING_TOO_LONG': { code: 'BOOKING_TOO_LONG', message: 'Booking duration exceeds maximum allowed', status: 400 },
-                'OUTSIDE_BOOKING_HOURS': { code: 'OUTSIDE_BOOKING_HOURS', message: 'Booking time is outside operating hours', status: 400 },
-                'MAX_BOOKINGS_PER_USER_PER_DAY_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'You have reached your daily booking limit for this space', status: 400 },
-                'MAX_TOTAL_BOOKINGS_PER_DAY_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'This space has reached its daily booking limit', status: 400 },
-                'MAX_ACTIVE_BOOKINGS_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'You have too many active bookings', status: 400 },
-                'SPACE_NOT_FOUND': { code: 'SPACE_NOT_FOUND', message: 'Space not found', status: 404 },
-            };
-
-            const mappedError = errorMessages[err.message];
-            if (mappedError) {
-                return res.status(mappedError.status).json({
+            const errorResponse = mapBookingError(err.message);
+            if (errorResponse) {
+                return res.status(errorResponse.status).json({
                     success: false,
-                    error: { code: mappedError.code, message: mappedError.message },
+                    error: { code: errorResponse.code, message: errorResponse.message },
                 });
             }
             throw err;
@@ -136,19 +114,10 @@ bookingRoutes.post('/', async (req: AuthRequest, res, next) => {
 });
 
 // Cancel a booking
-bookingRoutes.delete('/:bookingId', async (req: AuthRequest, res, next) => {
+bookingRoutes.delete('/:bookingId', bookingLimiter, async (req: AuthRequest, res, next) => {
     try {
-        const { bookingId } = req.params;
-
-        const booking = await prisma.booking.findFirst({
-            where: {
-                id: bookingId,
-                space: { orgId: req.org!.id },
-            },
-            include: {
-                space: { select: { id: true, name: true } },
-            },
-        });
+        const bookingId = req.params.bookingId as string;
+        const booking = await BookingService.findBooking(bookingId, req.org!.id);
 
         if (!booking) {
             return res.status(404).json({
@@ -157,7 +126,6 @@ bookingRoutes.delete('/:bookingId', async (req: AuthRequest, res, next) => {
             });
         }
 
-        // Only allow cancellation by the booking owner or admin
         const isAdmin = req.membership?.role === 'ADMIN';
         if (booking.userId !== req.user!.id && !isAdmin) {
             return res.status(403).json({
@@ -166,12 +134,8 @@ bookingRoutes.delete('/:bookingId', async (req: AuthRequest, res, next) => {
             });
         }
 
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: { status: 'CANCELLED' },
-        });
+        await BookingService.cancelBooking(bookingId);
 
-        // Broadcast cancellation
         broadcastBookingUpdate(req.org!.id, {
             type: 'BOOKING_CANCELLED',
             payload: {
@@ -191,3 +155,55 @@ bookingRoutes.delete('/:bookingId', async (req: AuthRequest, res, next) => {
         next(error);
     }
 });
+
+// --- Helper functions ---
+
+function buildRecurringJobs(data: any, user: { id: string; name: string }, orgId: string, isAdmin: boolean) {
+    const jobs: any[] = [];
+    const recurrenceGroupId = crypto.randomUUID();
+    let currentDate = new Date(data.startTime);
+    const endDate = data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null;
+    const count = data.recurrenceCount || 10;
+    const durationMs = new Date(data.endTime).getTime() - new Date(data.startTime).getTime();
+
+    for (let i = 0; i < count; i++) {
+        if (endDate && currentDate > endDate) break;
+
+        jobs.push({
+            data: {
+                spaceId: data.spaceId,
+                userId: user.id,
+                userName: user.name,
+                startTime: currentDate.toISOString(),
+                endTime: new Date(currentDate.getTime() + durationMs).toISOString(),
+                participants: data.participants || [],
+                notes: data.notes,
+                slotIndex: data.slotIndex,
+                slotId: data.slotId,
+                orgId,
+                isAdmin,
+                recurrenceGroupId,
+            }
+        });
+
+        if (data.recurrence === 'DAILY') currentDate.setDate(currentDate.getDate() + 1);
+        else if (data.recurrence === 'WEEKLY') currentDate.setDate(currentDate.getDate() + 7);
+    }
+
+    return jobs;
+}
+
+const BOOKING_ERROR_MAP: Record<string, { code: string; message: string; status: number }> = {
+    'SLOT_ALREADY_BOOKED': { code: 'SLOT_TAKEN', message: 'This slot has already been booked', status: 409 },
+    'BOOKING_TOO_FAR_AHEAD': { code: 'BOOKING_TOO_FAR_AHEAD', message: 'Cannot book this far in advance', status: 400 },
+    'BOOKING_TOO_LONG': { code: 'BOOKING_TOO_LONG', message: 'Booking duration exceeds maximum allowed', status: 400 },
+    'OUTSIDE_BOOKING_HOURS': { code: 'OUTSIDE_BOOKING_HOURS', message: 'Booking time is outside operating hours', status: 400 },
+    'MAX_BOOKINGS_PER_USER_PER_DAY_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'You have reached your daily booking limit for this space', status: 400 },
+    'MAX_TOTAL_BOOKINGS_PER_DAY_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'This space has reached its daily booking limit', status: 400 },
+    'MAX_ACTIVE_BOOKINGS_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'You have too many active bookings', status: 400 },
+    'SPACE_NOT_FOUND': { code: 'SPACE_NOT_FOUND', message: 'Space not found', status: 404 },
+};
+
+function mapBookingError(message: string) {
+    return BOOKING_ERROR_MAP[message];
+}

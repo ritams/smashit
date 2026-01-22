@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { User, Phone, IdCard, Loader2, Shield, Calendar, Building2, Pencil, X, Check, ArrowRight } from 'lucide-react';
+import { User, Phone, IdCard, Loader2, Shield, Calendar, Building2, Pencil, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, getInitials } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 export default function ProfilePage() {
     const { data: session } = useSession();
@@ -31,21 +31,13 @@ export default function ProfilePage() {
     // Fetch profile data
     const fetchProfile = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/users/me`, {
-                headers: {
-                    'x-user-email': session?.user?.email || '',
-                    'x-user-name': session?.user?.name || '',
-                },
+            const profileData = await api.getMe();
+            setProfile(profileData);
+            setFormData({
+                name: profileData.name || '',
+                phoneNumber: profileData.phoneNumber || '',
+                registrationId: profileData.registrationId || '',
             });
-            const result = await res.json();
-            if (result.success) {
-                setProfile(result.data);
-                setFormData({
-                    name: result.data.name || '',
-                    phoneNumber: result.data.phoneNumber || '',
-                    registrationId: result.data.registrationId || '',
-                });
-            }
         } catch (error) {
             console.error('Failed to fetch profile:', error);
             toast.error('Could not load profile');
@@ -63,25 +55,12 @@ export default function ProfilePage() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const res = await fetch(`${API_URL}/api/users/me`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-email': session?.user?.email || '',
-                    'x-user-name': session?.user?.name || '',
-                },
-                body: JSON.stringify(formData),
-            });
-            const result = await res.json();
-            if (result.success) {
-                setProfile({ ...profile, ...result.data });
-                setIsEditing(false);
-                toast.success('Profile updated successfully');
-            } else {
-                toast.error(result.error?.message || 'Failed to update profile');
-            }
+            const updatedData = await api.updateMe(formData);
+            setProfile({ ...profile, ...updatedData });
+            setIsEditing(false);
+            toast.success('Profile updated');
         } catch (error) {
-            toast.error('An error occurred while saving');
+            toast.error('Could not save changes');
         } finally {
             setIsSaving(false);
         }
@@ -98,312 +77,211 @@ export default function ProfilePage() {
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                <div className="relative">
-                    <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-                    <div className="relative bg-gradient-to-br from-primary to-primary/80 rounded-full p-4">
-                        <Loader2 className="h-8 w-8 animate-spin text-white" />
-                    </div>
-                </div>
-                <p className="text-muted-foreground font-medium animate-pulse">Loading your profile...</p>
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
 
     return (
-        <div className="max-w-5xl mx-auto pb-8">
-            {/* Animated Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-primary/15 via-primary/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s' }} />
-            </div>
+        <div className="max-w-3xl mx-auto py-4 px-4 sm:px-0">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-8 sm:mb-10 text-center sm:text-left">
+                <Avatar className="h-20 w-20 sm:h-28 sm:w-28 border border-border shadow-sm">
+                    <AvatarImage src={session?.user?.image || ''} className="object-cover" />
+                    <AvatarFallback className="text-xl sm:text-3xl font-medium bg-primary/[0.03] text-primary border border-primary/10">
+                        {getInitials(profile?.name || 'U')}
+                    </AvatarFallback>
+                </Avatar>
 
-            {/* Header Section with Gradient */}
-            <div className="relative overflow-hidden rounded-3xl mb-8 bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-border/50">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,transparent_0%,rgba(255,255,255,0.1)_50%,transparent_100%)] opacity-50" />
-                <div className="relative px-8 py-10 flex flex-col md:flex-row items-center gap-8">
-                    {/* Avatar with Ring Animation */}
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-br from-primary via-primary/50 to-primary/30 rounded-full opacity-75 group-hover:opacity-100 blur transition-all duration-500 group-hover:blur-md" />
-                        <Avatar className="relative h-28 w-28 md:h-32 md:w-32 border-4 border-background shadow-2xl ring-2 ring-white/20">
-                            <AvatarImage src={session?.user?.image || ''} className="object-cover" />
-                            <AvatarFallback className="text-3xl md:text-4xl font-bold bg-gradient-to-br from-primary/20 to-primary/10 text-primary">
-                                {getInitials(profile?.name || 'U')}
-                            </AvatarFallback>
-                        </Avatar>
-                    </div>
-
-                    {/* Profile Info */}
-                    <div className="flex-1 text-center md:text-left space-y-2">
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{profile?.name}</h1>
-                        <p className="text-muted-foreground font-medium text-lg">{profile?.email}</p>
-                        <div className="flex items-center justify-center md:justify-start gap-4 pt-2 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1.5">
-                                <Calendar className="h-4 w-4" />
-                                Joined {new Date(profile?.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                <div className="flex-1 min-w-0 space-y-3 sm:space-y-4 pt-1">
+                    <h1 className="text-3xl font-medium tracking-tight font-display text-foreground/90">{profile?.name}</h1>
+                    <div className="flex flex-col gap-1.5">
+                        <p className="text-muted-foreground/70 font-medium">{profile?.email}</p>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-5 mt-1 text-[13px] text-muted-foreground/60">
+                            <span className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 opacity-70" />
+                                <span className="font-medium">Joined {new Date(profile?.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
                             </span>
-                            <span className="flex items-center gap-1.5">
-                                <Building2 className="h-4 w-4" />
-                                {profile?.organizations?.length || 0} organization{(profile?.organizations?.length || 0) !== 1 ? 's' : ''}
+                            <div className="hidden sm:block h-3.5 w-px bg-border/40" />
+                            <span className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 opacity-70" />
+                                <span className="font-medium">{profile?.organizations?.length || 0} organization{(profile?.organizations?.length || 0) !== 1 ? 's' : ''}</span>
                             </span>
                         </div>
                     </div>
-
-                    {/* Edit Button */}
-                    <div className="flex-shrink-0">
-                        {!isEditing ? (
-                            <Button
-                                onClick={() => setIsEditing(true)}
-                                variant="outline"
-                                size="lg"
-                                className="rounded-xl gap-2 bg-background/80 backdrop-blur-sm hover:bg-background hover:scale-105 transition-all duration-300 shadow-lg"
-                            >
-                                <Pencil className="h-4 w-4" />
-                                Edit Profile
-                            </Button>
-                        ) : (
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={handleCancel}
-                                    variant="ghost"
-                                    size="lg"
-                                    className="rounded-xl gap-2 hover:bg-destructive/10 hover:text-destructive transition-all duration-300"
-                                >
-                                    <X className="h-4 w-4" />
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={isSaving}
-                                    size="lg"
-                                    className="rounded-xl gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-primary/25 hover:scale-105 transition-all duration-300"
-                                >
-                                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                    Save Changes
-                                </Button>
-                            </div>
-                        )}
-                    </div>
                 </div>
+
+                {!isEditing ? (
+                    <Button
+                        onClick={() => setIsEditing(true)}
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto px-6 h-10 rounded-lg border-border/60 hover:bg-muted/50 transition-colors"
+                    >
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
+                        Edit Profile
+                    </Button>
+                ) : (
+                    <div className="flex gap-3 w-full sm:w-auto justify-center">
+                        <Button
+                            onClick={handleCancel}
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1 sm:flex-none h-10 px-6 rounded-lg text-muted-foreground/70 hover:text-foreground transition-colors"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            size="sm"
+                            className="flex-1 sm:flex-none h-10 px-8 rounded-lg shadow-sm transition-all"
+                        >
+                            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <Check className="h-3.5 w-3.5 mr-2" />}
+                            Save Changes
+                        </Button>
+                    </div>
+                )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Personal Details Section */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className={cn(
-                        "bg-background/80 backdrop-blur-xl border rounded-2xl shadow-lg overflow-hidden transition-all duration-500",
-                        isEditing ? "border-primary/50 ring-2 ring-primary/20" : "border-border/50"
-                    )}>
-                        <div className="px-6 py-4 border-b border-border/50 bg-gradient-to-r from-muted/50 to-transparent">
-                            <h3 className="font-bold text-lg flex items-center gap-2">
-                                <User className="h-5 w-5 text-primary" />
-                                Personal Details
-                            </h3>
-                        </div>
-                        <div className="p-6">
-                            {isEditing ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-name" className="text-sm font-semibold">Display Name</Label>
-                                        <Input
-                                            id="edit-name"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="rounded-xl h-12 text-base transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-phone" className="text-sm font-semibold flex items-center gap-2">
-                                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                                            Phone Number
-                                        </Label>
-                                        <Input
-                                            id="edit-phone"
-                                            value={formData.phoneNumber}
-                                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                                            placeholder="+1 234 567 890"
-                                            className="rounded-xl h-12 text-base transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                                        />
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="edit-id" className="text-sm font-semibold flex items-center gap-2">
-                                            <IdCard className="h-3.5 w-3.5 text-muted-foreground" />
-                                            Registration / ID Number
-                                        </Label>
-                                        <Input
-                                            id="edit-id"
-                                            value={formData.registrationId}
-                                            onChange={(e) => setFormData({ ...formData, registrationId: e.target.value })}
-                                            placeholder="EMP-123 or STU-456"
-                                            className="rounded-xl h-12 text-base transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <DetailItem
-                                        icon={<User className="h-4 w-4" />}
-                                        label="Display Name"
-                                        value={profile?.name || 'Not provided'}
-                                    />
-                                    <DetailItem
-                                        icon={<Phone className="h-4 w-4" />}
-                                        label="Phone Number"
-                                        value={profile?.phoneNumber || 'Not provided'}
-                                        empty={!profile?.phoneNumber}
-                                    />
-                                    <DetailItem
-                                        icon={<IdCard className="h-4 w-4" />}
-                                        label="Registration ID"
-                                        value={profile?.registrationId || 'Not provided'}
-                                        empty={!profile?.registrationId}
-                                        className="md:col-span-2"
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+            {/* Details Section */}
+            <div className="space-y-8">
+                <section>
+                    <h2 className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-[0.2em] mb-6">
+                        Personal details
+                    </h2>
 
-                {/* Account Summary Card */}
-                <div className="space-y-6">
-                    <div className="bg-gradient-to-br from-primary/10 via-background to-background border border-border/50 rounded-2xl p-6 shadow-lg">
-                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <User className="h-4 w-4 text-primary" />
+                    {isEditing ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-muted/[0.02] border border-border/30 rounded-2xl p-6">
+                            <div className="space-y-3">
+                                <Label htmlFor="edit-name" className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 ml-1">Display name</Label>
+                                <Input
+                                    id="edit-name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className="h-12 border-border/40 bg-background/50 focus:ring-primary/20 rounded-xl"
+                                />
                             </div>
-                            Account Summary
-                        </h3>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-background/60 border border-border/30">
-                                <span className="text-muted-foreground text-sm">Member since</span>
-                                <span className="font-semibold text-sm">
-                                    {new Date(profile?.createdAt).toLocaleDateString(undefined, {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                    })}
-                                </span>
+                            <div className="space-y-3">
+                                <Label htmlFor="edit-phone" className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 ml-1">Phone number</Label>
+                                <Input
+                                    id="edit-phone"
+                                    value={formData.phoneNumber}
+                                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                                    placeholder="Not provided"
+                                    className="h-12 border-border/40 bg-background/50 focus:ring-primary/20 rounded-xl"
+                                />
                             </div>
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-background/60 border border-border/30">
-                                <span className="text-muted-foreground text-sm">Organizations</span>
-                                <span className="font-semibold text-sm bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
-                                    {profile?.organizations?.length || 0}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-background/60 border border-border/30">
-                                <span className="text-muted-foreground text-sm">Profile Status</span>
-                                <span className={cn(
-                                    "font-semibold text-sm px-2.5 py-0.5 rounded-full",
-                                    profile?.phoneNumber && profile?.registrationId
-                                        ? "bg-green-500/10 text-green-600"
-                                        : "bg-amber-500/10 text-amber-600"
-                                )}>
-                                    {profile?.phoneNumber && profile?.registrationId ? 'Complete' : 'Incomplete'}
-                                </span>
+                            <div className="space-y-3 sm:col-span-2">
+                                <Label htmlFor="edit-id" className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 ml-1">Registration / ID number</Label>
+                                <Input
+                                    id="edit-id"
+                                    value={formData.registrationId}
+                                    onChange={(e) => setFormData({ ...formData, registrationId: e.target.value })}
+                                    placeholder="Optional"
+                                    className="h-12 border-border/40 bg-background/50 focus:ring-primary/20 rounded-xl"
+                                />
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <DetailField
+                                label="Display name"
+                                value={profile?.name}
+                            />
+                            <DetailField
+                                label="Phone number"
+                                value={profile?.phoneNumber}
+                                placeholder="Not provided"
+                            />
+                            <DetailField
+                                label="Registration ID"
+                                value={profile?.registrationId}
+                                placeholder="Not provided"
+                                className="sm:col-span-2"
+                            />
+                        </div>
+                    )}
+                </section>
 
-            {/* Organizations Section */}
-            <div className="mt-8 space-y-4">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    My Organizations
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Organizations Section */}
+                <section>
+                    <h2 className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-[0.2em] mb-6">
+                        Organizations
+                    </h2>
+
                     {profile?.organizations?.length > 0 ? (
-                        profile.organizations.map((org: any, index: number) => (
-                            <div
-                                key={org.id}
-                                className="group relative bg-background/80 backdrop-blur-xl border border-border/50 rounded-2xl p-5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
-                                style={{ animationDelay: `${index * 100}ms` }}
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-                                <div className="relative flex items-center gap-4">
-                                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary shadow-sm group-hover:scale-110 transition-transform duration-300">
-                                        <span className="font-bold text-2xl">{org.name.charAt(0)}</span>
+                        <div className="grid grid-cols-1 gap-3">
+                            {profile.organizations.map((org: any) => (
+                                <div
+                                    key={org.id}
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm hover:bg-card/80 hover:border-border/80 transition-all group"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-primary/[0.03] border border-primary/10 flex items-center justify-center text-primary font-display font-medium text-xl shadow-sm">
+                                            {org.name.charAt(0)}
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            <p className="font-display text-lg font-medium text-foreground/90 group-hover:text-primary transition-colors">{org.name}</p>
+                                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/40">
+                                                {org.role === 'ADMIN' ? 'Administrator' : 'Community Member'}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-lg truncate">{org.name}</h4>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                            <span className={cn(
-                                                "h-2 w-2 rounded-full animate-pulse",
-                                                org.role === 'ADMIN' ? 'bg-amber-500' : 'bg-green-500'
-                                            )} />
-                                            {org.role.charAt(0) + org.role.slice(1).toLowerCase()}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <Button
-                                            asChild
-                                            variant="ghost"
-                                            size="sm"
-                                            className="rounded-xl gap-2 hover:bg-primary/10 hover:text-primary group/btn"
-                                        >
-                                            <Link href={`/org/${org.slug}/book`}>
-                                                <Calendar className="h-4 w-4" />
-                                                <span className="hidden sm:inline">Book</span>
-                                                <ArrowRight className="h-3 w-3 opacity-0 -ml-1 group-hover/btn:opacity-100 group-hover/btn:ml-0 transition-all duration-200" />
-                                            </Link>
-                                        </Button>
-                                        {org.role === 'ADMIN' && (
-                                            <Button
-                                                asChild
-                                                variant="outline"
-                                                size="sm"
-                                                className="rounded-xl gap-2 border-amber-500/30 text-amber-600 hover:border-amber-500/50 hover:bg-amber-500/10 group/btn"
-                                            >
-                                                <Link href={`/org/${org.slug}/admin`}>
-                                                    <Shield className="h-4 w-4" />
-                                                    <span className="hidden sm:inline">Admin</span>
-                                                </Link>
+                                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                                        <Link href={`/org/${org.slug}/book`} className="flex-1 sm:flex-none">
+                                            <Button variant="ghost" size="sm" className="w-full sm:w-auto h-9 px-4 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 transition-colors">
+                                                <Calendar className="h-4 w-4 mr-2 opacity-70" />
+                                                Book
                                             </Button>
+                                        </Link>
+                                        {org.role === 'ADMIN' && (
+                                            <Link href={`/org/${org.slug}/admin`} className="flex-1 sm:flex-none">
+                                                <Button variant="outline" size="sm" className="w-full sm:w-auto h-9 px-5 rounded-lg border-border/60 hover:bg-muted/50 transition-colors">
+                                                    <Shield className="h-4 w-4 mr-2 opacity-70" />
+                                                    Admin
+                                                </Button>
+                                            </Link>
                                         )}
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     ) : (
-                        <div className="md:col-span-2 text-center py-16 bg-gradient-to-br from-muted/30 via-background to-muted/20 border border-dashed border-border/50 rounded-2xl">
-                            <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                            <p className="text-muted-foreground font-medium">You are not a member of any organizations yet.</p>
-                            <p className="text-muted-foreground/60 text-sm mt-1">Join an organization to start booking!</p>
+                        <div className="text-center py-10 border border-dashed border-border rounded-lg">
+                            <Building2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                            <p className="text-sm text-muted-foreground">Not a member of any organizations</p>
                         </div>
                     )}
-                </div>
+                </section>
             </div>
         </div>
     );
 }
 
-// Detail Item Component
-function DetailItem({
-    icon,
+function DetailField({
     label,
     value,
-    empty,
+    placeholder = '',
     className
 }: {
-    icon: React.ReactNode;
     label: string;
-    value: string;
-    empty?: boolean;
+    value?: string;
+    placeholder?: string;
     className?: string;
 }) {
+    const displayValue = value || placeholder;
+    const isEmpty = !value;
+
     return (
-        <div className={cn("p-4 rounded-xl bg-muted/30 border border-border/30 hover:border-primary/30 transition-all duration-200 group", className)}>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-1.5">
-                <span className="text-primary/60 group-hover:text-primary transition-colors">{icon}</span>
-                {label}
-            </p>
+        <div className={cn("py-3 px-1 border-b border-border/30 last:border-0", className)}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50 mb-1">{label}</p>
             <p className={cn(
-                "text-lg font-medium",
-                empty && "text-muted-foreground/50 italic"
+                "text-base font-medium text-foreground/80",
+                isEmpty && "text-muted-foreground/30 font-normal italic"
             )}>
-                {value}
+                {displayValue}
             </p>
         </div>
     );

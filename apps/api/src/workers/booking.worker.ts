@@ -1,13 +1,15 @@
 import { Worker, Job } from 'bullmq';
-import { prisma } from '@smashit/database';
-import { redis } from '../lib/redis.js';
+import { prisma } from '@avith/database';
+import { redis, createLogger } from '../lib/core.js';
 import { BookingJobData } from '../lib/queue.js';
 import { startOfDay, addDays, isAfter, endOfDay } from 'date-fns';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
 
+const log = createLogger('BookingWorker');
+
 export const processBooking = async (job: Job<BookingJobData>) => {
-    const { spaceId, userId, userName, startTime, endTime, participants, notes, slotIndex, slotId, orgId } = job.data;
-    console.log(`[Worker] Processing booking: spaceId=${spaceId}, userId=${userId}, slotIndex=${slotIndex}, slotId=${slotId}`);
+    const { spaceId, userId, userName, startTime, endTime, participants, notes, slotIndex, slotId, orgId, isAdmin } = job.data;
+    log.info('Processing booking', { spaceId, userId, slotIndex, slotId, isAdmin });
 
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -22,8 +24,8 @@ export const processBooking = async (job: Job<BookingJobData>) => {
 
     const rules = space.rules;
 
-    // === RULE VALIDATION ===
-    if (rules) {
+    // === RULE VALIDATION === (Skip for admins)
+    if (rules && !isAdmin) {
         const now = new Date();
         const durationMin = (end.getTime() - start.getTime()) / (1000 * 60);
 
@@ -84,7 +86,7 @@ export const processBooking = async (job: Job<BookingJobData>) => {
                 }
             });
 
-            console.log(`[Worker] Rule check: maxBookingsPerUserPerDay=${rules.maxBookingsPerUserPerDay}, userBookingsToday=${userBookingsToday}, spaceType=${space.type}, sameTypeSpaces=${sameTypeSpaceIds.length}`);
+            log.debug('Rule check', { maxBookingsPerUserPerDay: rules.maxBookingsPerUserPerDay, userBookingsToday, spaceType: space.type, sameTypeSpaces: sameTypeSpaceIds.length });
 
             if (userBookingsToday >= rules.maxBookingsPerUserPerDay) {
                 throw new Error('MAX_BOOKINGS_PER_USER_PER_DAY_EXCEEDED');
@@ -218,17 +220,21 @@ export const processBooking = async (job: Job<BookingJobData>) => {
 let worker: Worker | null = null;
 
 export async function startBookingWorker() {
+    const concurrency = parseInt(process.env.WORKER_CONCURRENCY || '5', 10);
+
     worker = new Worker<BookingJobData>('bookings', processBooking, {
-        connection: redis,
-        concurrency: 5,
+        connection: redis as any, // Cast to bypass ioredis version mismatch
+        concurrency,
     });
 
+    log.info('Booking worker starting', { concurrency });
+
     worker.on('completed', (job) => {
-        console.log(`✅ Booking ${job.id} completed`);
+        log.info('Booking job completed', { jobId: job.id, name: job.name });
     });
 
     worker.on('failed', (job, err) => {
-        console.error(`❌ Booking ${job?.id} failed:`, err.message);
+        log.error('Booking job failed', { jobId: job?.id, error: err.message, name: job?.name });
     });
 
     return worker;

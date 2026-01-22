@@ -1,4 +1,4 @@
-import { prisma } from '@smashit/database';
+import { prisma } from '@avith/database';
 import { fromZonedTime } from 'date-fns-tz';
 import { addHours, addMinutes } from 'date-fns';
 
@@ -7,11 +7,30 @@ export interface AvailabilityParams {
     date: string; // YYYY-MM-DD
     orgTimezone: string | undefined;
 }
-// ... (keep TimeSlot interface)
 
-export async function getDetailedSpaceAvailability(params: AvailabilityParams): Promise<{ space: any; slots: any[] }> {
+interface BookingWithUser {
+    id: string;
+    userId: string;
+    slotIndex: number | null;
+    slotId: string | null;
+    participants: unknown; // JsonValue from Prisma
+    user: { id: string; name: string; email: string; avatarUrl: string | null };
+    startTime: Date;
+    endTime: Date;
+}
+
+/**
+ * Get detailed time slot availability for a space on a specific date
+ * 
+ * @param params - Availability query parameters
+ * @param params.spaceId - The space to check availability for
+ * @param params.date - Date in YYYY-MM-DD format
+ * @param params.orgTimezone - Organization's timezone (defaults to UTC)
+ * @returns Space details with time slots and their booking status
+ * @throws Error if space not found or rules missing
+ */
+export async function getDetailedSpaceAvailability(params: AvailabilityParams) {
     const { spaceId, date, orgTimezone } = params;
-    console.log(`[Service] getDetailedSpaceAvailability for space ${spaceId} date ${date} tz ${orgTimezone}`);
 
     const space = await prisma.space.findUnique({
         where: { id: spaceId },
@@ -22,7 +41,6 @@ export async function getDetailedSpaceAvailability(params: AvailabilityParams): 
     });
 
     if (!space || !space.rules) {
-        console.error(`[Service] Space ${spaceId} not found or rules missing`);
         throw new Error('Space not found or rules missing');
     }
 
@@ -85,7 +103,7 @@ export async function getDetailedSpaceAvailability(params: AvailabilityParams): 
                 startTime: slotStart.toISOString(),
                 endTime: slotEnd.toISOString(),
                 isAvailable: overlappingBookings.length < space.capacity,
-                bookings: overlappingBookings.map((b: any) => ({
+                bookings: overlappingBookings.map((b: BookingWithUser) => ({
                     id: b.id,
                     userId: b.userId,
                     userEmail: b.user.email,
@@ -111,6 +129,7 @@ export async function getDetailedSpaceAvailability(params: AvailabilityParams): 
         space: {
             id: space.id,
             name: space.name,
+            type: space.type,
             capacity: space.capacity,
             slots: space.slots,
             rules: space.rules,

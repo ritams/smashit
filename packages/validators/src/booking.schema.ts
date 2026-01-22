@@ -11,11 +11,15 @@ export const createBookingSchema = z.object({
                 email: z.string().email().optional(),
             })
         )
+        .max(50)
         .optional()
         .default([]),
     notes: z.string().max(500).optional(),
     slotIndex: z.number().int().min(0).optional(),
     slotId: z.string().uuid().optional(),
+    recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY']).optional().default('NONE'),
+    recurrenceEndDate: z.string().datetime().optional(),
+    recurrenceCount: z.number().int().min(1).max(52).optional(),
 });
 
 export const getAvailabilitySchema = z.object({

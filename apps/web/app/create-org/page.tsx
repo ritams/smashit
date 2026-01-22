@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { Calendar, Check, X, Loader2, ArrowLeft, LogOut } from 'lucide-react';
+import { Check, X, Loader2, ArrowLeft, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 import { API_URL } from '@/lib/config';
 
@@ -90,8 +92,8 @@ export default function CreateOrgPage() {
     // Show loading state
     if (status === 'loading') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-primary/5">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
             </div>
         );
     }
@@ -99,8 +101,8 @@ export default function CreateOrgPage() {
     // Show login prompt if not authenticated
     if (!session) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5 flex items-center justify-center p-4">
-                <div className="w-full max-w-md space-y-6">
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="w-full max-w-sm space-y-6">
                     <Link
                         href="/"
                         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -110,23 +112,24 @@ export default function CreateOrgPage() {
                     </Link>
 
                     <div className="text-center space-y-2">
-                        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-                            <Calendar className="h-7 w-7" />
-                        </div>
-                        <h1 className="text-2xl font-bold">Create Your Organization</h1>
-                        <p className="text-muted-foreground">
-                            Sign in first to create and manage your organization
+                        <span className="text-lg font-medium tracking-tight text-muted-foreground">
+                            avith
+                        </span>
+                        <h1 className="text-2xl font-medium">Create your community</h1>
+                        <p className="text-muted-foreground text-sm">
+                            Sign in to create and manage your organization
                         </p>
                     </div>
 
-                    <Card className="border-0 shadow-xl">
+                    <Card className="border border-border">
                         <CardContent className="pt-6 space-y-4">
                             <Button
                                 onClick={() => signIn('google', { callbackUrl: '/create-org' })}
-                                className="w-full h-12 text-base gap-3"
+                                variant="outline"
+                                className="w-full h-11 text-sm gap-3 border-border hover:bg-muted"
                                 size="lg"
                             >
-                                <svg className="h-5 w-5" viewBox="0 0 24 24">
+                                <svg className="h-4 w-4" viewBox="0 0 24 24">
                                     <path
                                         fill="currentColor"
                                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -146,7 +149,7 @@ export default function CreateOrgPage() {
                                 </svg>
                                 Sign in with Google
                             </Button>
-                            <p className="text-center text-sm text-muted-foreground">
+                            <p className="text-center text-xs text-muted-foreground">
                                 You&apos;ll become the admin of your organization
                             </p>
                         </CardContent>
@@ -158,8 +161,8 @@ export default function CreateOrgPage() {
 
     // Show org creation form for authenticated users
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5 flex items-center justify-center p-4">
-            <div className="w-full max-w-md space-y-6">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="w-full max-w-sm space-y-6">
                 {/* Back link */}
                 <Link
                     href="/dashboard"
@@ -169,52 +172,54 @@ export default function CreateOrgPage() {
                     Back to dashboard
                 </Link>
 
-                {/* Logo */}
+                {/* Header */}
                 <div className="text-center space-y-2">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-                        <Calendar className="h-7 w-7" />
-                    </div>
-                    <h1 className="text-2xl font-bold">Create Your Organization</h1>
-                    <p className="text-muted-foreground">
-                        Signed in as <strong>{session.user?.name}</strong>
+                    <span className="text-lg font-medium tracking-tight text-muted-foreground">
+                        avith
+                    </span>
+                    <h1 className="text-2xl font-medium">Create your community</h1>
+                    <p className="text-muted-foreground text-sm">
+                        Signed in as {session.user?.name}
                     </p>
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground"
+                        className="text-muted-foreground text-xs"
                         onClick={() => signOut({ callbackUrl: '/create-org' })}
                     >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Switch Account
+                        <LogOut className="h-3 w-3 mr-1" />
+                        Switch account
                     </Button>
                 </div>
 
                 {/* Form */}
-                <Card className="border-0 shadow-xl">
+                <Card className="border border-border">
                     <CardContent className="pt-6">
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Organization Name */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Organization Name</label>
-                                <input
+                                <Label htmlFor="name">Community name</Label>
+                                <Input
+                                    id="name"
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="e.g., IISER Pune Sports Club"
-                                    className="w-full px-4 py-3 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="e.g., Oakwood Country Club"
+                                    className="h-11"
                                     required
                                 />
                             </div>
 
                             {/* Slug / URL */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Your URL</label>
+                                <Label htmlFor="slug">Your URL</Label>
                                 <div className="relative">
                                     <div className="flex items-center">
-                                        <span className="px-3 py-3 rounded-l-lg border border-r-0 bg-muted text-muted-foreground text-xs">
+                                        <span className="px-3 h-11 flex items-center rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-xs">
                                             /org/
                                         </span>
-                                        <input
+                                        <Input
+                                            id="slug"
                                             type="text"
                                             value={slug}
                                             onChange={(e) =>
@@ -222,8 +227,8 @@ export default function CreateOrgPage() {
                                                     e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
                                                 )
                                             }
-                                            placeholder="your-org"
-                                            className="w-full px-4 py-3 rounded-r-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                            placeholder="your-community"
+                                            className="rounded-l-none h-11"
                                             required
                                             minLength={2}
                                         />
@@ -233,11 +238,11 @@ export default function CreateOrgPage() {
                                     {slug.length >= 2 && (
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                             {checkingSlug ? (
-                                                <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                                                <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
                                             ) : slugAvailable ? (
-                                                <Check className="h-5 w-5 text-green-500" />
+                                                <Check className="h-4 w-4 text-success" />
                                             ) : slugAvailable === false ? (
-                                                <X className="h-5 w-5 text-red-500" />
+                                                <X className="h-4 w-4 text-destructive" />
                                             ) : null}
                                         </div>
                                     )}
@@ -245,15 +250,15 @@ export default function CreateOrgPage() {
 
                                 {slug.length >= 2 && !checkingSlug && (
                                     <p
-                                        className={`text-sm ${slugAvailable
-                                            ? 'text-green-600'
-                                            : slugAvailable === false
-                                                ? 'text-red-600'
-                                                : 'text-muted-foreground'
+                                        className={`text-xs ${slugAvailable
+                                                ? 'text-success'
+                                                : slugAvailable === false
+                                                    ? 'text-destructive'
+                                                    : 'text-muted-foreground'
                                             }`}
                                     >
                                         {slugAvailable
-                                            ? 'This URL is available!'
+                                            ? 'This URL is available'
                                             : slugAvailable === false
                                                 ? 'This URL is already taken'
                                                 : ''}
@@ -262,15 +267,14 @@ export default function CreateOrgPage() {
                             </div>
 
                             {error && (
-                                <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+                                <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-md">
                                     {error}
                                 </p>
                             )}
 
                             <Button
                                 type="submit"
-                                size="lg"
-                                className="w-full h-12"
+                                className="w-full h-11"
                                 disabled={!slugAvailable || isCreating || !name}
                             >
                                 {isCreating ? (
@@ -279,15 +283,15 @@ export default function CreateOrgPage() {
                                         Creating...
                                     </>
                                 ) : (
-                                    'Create Organization'
+                                    'Create community'
                                 )}
                             </Button>
                         </form>
                     </CardContent>
                 </Card>
 
-                <p className="text-center text-sm text-muted-foreground">
-                    You&apos;ll be the admin of this organization
+                <p className="text-center text-xs text-muted-foreground">
+                    You&apos;ll be the admin of this community
                 </p>
             </div>
         </div>

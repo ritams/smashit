@@ -1,13 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    transpilePackages: ['@smashit/types', '@smashit/validators'],
+    output: 'standalone',
+    transpilePackages: ['@avith/types', '@avith/validators'],
     images: {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'lh3.googleusercontent.com',
+                hostname: '**.googleusercontent.com',
             },
         ],
+    },
+    experimental: {
+        optimizePackageImports: ['lucide-react', 'date-fns', '@radix-ui/react-icons', 'lodash'],
     },
 };
 

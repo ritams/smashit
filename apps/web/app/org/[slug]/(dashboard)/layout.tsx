@@ -1,22 +1,13 @@
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { useParams } from 'next/navigation';
-import { Calendar, LogOut, Shield, User } from 'lucide-react';
+import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { getInitials } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
+import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
+import { MobileNav } from '@/components/layout/MobileNav';
+import { UserNav } from '@/components/layout/UserNav';
 
 export default function DashboardLayout({
     children,
@@ -25,6 +16,7 @@ export default function DashboardLayout({
 }) {
     const { data: session } = useSession();
     const params = useParams();
+    const pathname = usePathname();
     const orgSlug = params.slug as string;
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -33,14 +25,9 @@ export default function DashboardLayout({
         async function checkAdmin() {
             if (!session?.user?.email) return;
             try {
-                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}/admin/stats`, {
-                    headers: {
-                        'x-user-email': session.user.email,
-                        'x-user-name': session.user.name || '',
-                    },
-                });
                 // If we can access admin stats, user is admin
-                setIsAdmin(res.ok);
+                await api.getStats(orgSlug);
+                setIsAdmin(true);
             } catch {
                 setIsAdmin(false);
             }
@@ -53,87 +40,75 @@ export default function DashboardLayout({
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10">
+        <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
-                <div className="container flex h-16 items-center justify-between">
-                    <div className="flex items-center gap-6">
-                        <Link href={`/org/${orgSlug}/book`} className="flex items-center gap-2">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground">
-                                <Calendar className="h-4 w-4" />
-                            </div>
-                            <span className="font-semibold">SmashIt</span>
+            <header className="hidden md:flex sticky top-0 z-50 border-b border-border bg-background">
+                <div className="container flex h-14 items-center justify-between">
+                    <div className="flex items-center gap-8">
+                        <Link href={`/org/${orgSlug}/book`} className="group">
+                            <span className="font-display text-xl font-medium tracking-tight text-foreground/90 transition-colors group-hover:text-primary">
+                                Avith
+                            </span>
                         </Link>
-                        <nav className="hidden md:flex items-center gap-4">
+                        <nav className="hidden md:flex items-center gap-3">
+                            <Link
+                                href={`/org/${orgSlug}/facilities`}
+                                className={cn(
+                                    "text-[13px] font-medium transition-colors px-2 py-1",
+                                    pathname?.includes('/facilities')
+                                        ? "text-primary"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Facilities
+                            </Link>
                             <Link
                                 href={`/org/${orgSlug}/book`}
-                                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                className={cn(
+                                    "text-[13px] font-medium transition-colors px-2 py-1",
+                                    pathname?.includes('/book')
+                                        ? "text-primary"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
                             >
                                 Book
                             </Link>
                             <Link
                                 href={`/org/${orgSlug}/my-bookings`}
-                                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                className={cn(
+                                    "text-[13px] font-medium transition-colors px-2 py-1",
+                                    pathname?.includes('/my-bookings')
+                                        ? "text-primary"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
                             >
                                 My Bookings
                             </Link>
+                            {isAdmin && (
+                                <Link
+                                    href={`/org/${orgSlug}/admin`}
+                                    className={cn(
+                                        "text-[13px] font-medium transition-colors px-1 py-1",
+                                        pathname?.includes('/admin')
+                                            ? "text-primary"
+                                            : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    Admin
+                                </Link>
+                            )}
                         </nav>
                     </div>
 
                     {/* User Menu */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="flex items-center gap-2 px-2">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={session?.user?.image || ''} />
-                                    <AvatarFallback className="text-xs">
-                                        {getInitials(session?.user?.name || 'U')}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <span className="hidden md:block text-sm font-medium">
-                                    {session?.user?.name}
-                                </span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel>
-                                <div className="flex flex-col space-y-1">
-                                    <p className="text-sm font-medium">{session?.user?.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {session?.user?.email}
-                                    </p>
-                                </div>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Link href={`/org/${orgSlug}/profile`} className="cursor-pointer">
-                                    <User className="mr-2 h-4 w-4" />
-                                    Profile
-                                </Link>
-                            </DropdownMenuItem>
-                            {isAdmin && (
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/org/${orgSlug}/admin`} className="cursor-pointer">
-                                        <Shield className="mr-2 h-4 w-4" />
-                                        Admin Dashboard
-                                    </Link>
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={handleLogout}
-                                className="text-destructive cursor-pointer"
-                            >
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Sign Out
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <UserNav orgSlug={orgSlug} isAdmin={isAdmin} />
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="container py-6">{children}</main>
+            <main className="container py-6 pb-24 md:pb-6">{children}</main>
+
+            <MobileNav isAdmin={isAdmin} />
         </div>
     );
 }

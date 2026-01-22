@@ -19,7 +19,7 @@ export interface PaginatedResponse<T> {
 }
 
 export interface SSEMessage {
-    type: 'SLOT_UPDATE' | 'BOOKING_CREATED' | 'BOOKING_CANCELLED';
+    type: 'SLOT_UPDATE' | 'BOOKING_CREATED' | 'BOOKING_CANCELLED' | 'SPACE_UPDATED';
     payload: {
         spaceId: string;
         date: string;

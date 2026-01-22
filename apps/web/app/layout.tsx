@@ -1,14 +1,23 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Cormorant_Garamond } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from 'sonner';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+    subsets: ['latin'],
+    variable: '--font-inter',
+});
+
+const cormorant = Cormorant_Garamond({
+    subsets: ['latin'],
+    variable: '--font-display',
+    weight: ['400', '500', '600', '700'],
+});
 
 export const metadata: Metadata = {
-    title: 'SmashIt - Book Your Space',
-    description: 'Easy scheduling and booking for your organization',
+    title: 'Avith — Premium Sports Booking',
+    description: 'Elegant booking solutions for private communities',
 };
 
 export default function RootLayout({
@@ -18,7 +27,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={inter.className}>
+            <body className={`${inter.variable} ${cormorant.variable} font-sans`}>
                 <Providers>{children}</Providers>
                 <Toaster
                     position="bottom-right"

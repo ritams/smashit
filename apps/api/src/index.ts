@@ -7,10 +7,17 @@ import { bookingRoutes } from './routes/booking.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
 import { sseRoutes } from './routes/sse.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
+import { requestLogger } from './middleware/request-logger.middleware.js';
 import { startBookingWorker } from './workers/booking.worker.js';
+import { validateEnv, generalLimiter, createLogger } from './lib/core.js';
+import { createError } from './middleware/error.middleware.js';
 
+const log = createLogger('Server');
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// Validate environment on startup
+validateEnv();
 
 // Middleware
 app.use(cors({
@@ -19,9 +26,19 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Health check
-app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Request logging (adds correlation IDs and timing)
+app.use(requestLogger);
+
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
+
+// Health check (excluded from logging for noise reduction)
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        correlationId: req.correlationId,
+    });
 });
 
 // Routes
@@ -32,24 +49,28 @@ app.use('/api/orgs/:slug/bookings', bookingRoutes);
 app.use('/api/orgs/:slug/admin', adminRoutes);
 app.use('/api/events', sseRoutes);
 
+// 404 Handler
+app.use((_req, _res, next) => {
+    next(createError('Route not found', 404, 'NOT_FOUND'));
+});
+
 // Error handler
 app.use(errorHandler);
 
 // Start server and worker
 async function start() {
     try {
-        // Start booking queue worker
         await startBookingWorker();
-        console.log('📦 Booking worker started');
-        console.log('📦 Server restarting...');
+        log.info('Booking worker started');
 
         app.listen(PORT, () => {
-            console.log(`🚀 API server running on http://localhost:${PORT}`);
+            log.info(`API server running on http://localhost:${PORT}`);
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        log.error('Failed to start server', { error: (error as Error).message });
         process.exit(1);
     }
 }
 
 start();
+
