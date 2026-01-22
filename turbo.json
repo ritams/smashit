@@ -6,7 +6,12 @@
     "tasks": {
         "build": {
             "dependsOn": [
+                "db:generate",
                 "^build"
+            ],
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                ".env*"
             ],
             "outputs": [
                 ".next/**",
