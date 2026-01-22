@@ -33,8 +33,8 @@ export default function LandingPage() {
             {/* Header */}
             <header
                 className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-                        ? 'py-4 bg-background/95 backdrop-blur-sm border-b border-border'
-                        : 'py-6 bg-transparent'
+                    ? 'py-4 bg-background/95 backdrop-blur-sm border-b border-border'
+                    : 'py-6 bg-transparent'
                     }`}
             >
                 <div className="container max-w-6xl">
@@ -97,7 +97,7 @@ export default function LandingPage() {
                                         Sign in
                                     </button>
                                     <Link href="/contact">
-                                        <Button size="sm">Partner With Us</Button>
+                                        <Button size="sm" className="hover:scale-[1.02] transition-transform">Partner With Us</Button>
                                     </Link>
                                 </>
                             )}
@@ -110,20 +110,19 @@ export default function LandingPage() {
             <section className="min-h-screen flex flex-col justify-center relative">
                 {/* Subtle watermark */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-                    <span className="font-display text-[20vw] font-medium text-muted/5 tracking-tight">
+                    <span className="font-display text-[22vw] font-light text-muted/5 tracking-tighter">
                         Avith
                     </span>
                 </div>
 
-                <div className="container max-w-6xl relative z-10 pt-24">
-                    <div className="max-w-3xl space-y-8">
-                        <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-medium tracking-tight leading-[1.05]">
-                            Elegant booking for private communities
+                <div className="container max-w-6xl relative z-10 pt-32 pb-24">
+                    <div className="max-w-4xl space-y-10">
+                        <h1 className="font-display text-6xl md:text-7xl lg:text-8xl font-medium tracking-tight leading-[0.95] text-balance">
+                            Bespoke reservation infrastructure
                         </h1>
 
                         <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl font-light">
-                            Avith brings effortless court and space reservations to
-                            communities who expect the&nbsp;best.
+                            Elevated scheduling systems for private clubs and exclusive communities who demand excellence.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-start gap-4 pt-4">
@@ -137,7 +136,7 @@ export default function LandingPage() {
                             ) : (
                                 <>
                                     <Link href="/contact">
-                                        <Button size="lg" className="h-14 px-10 text-base">
+                                        <Button size="lg" className="h-14 px-12 text-base transition-transform hover:scale-[1.02] active:scale-[0.98]">
                                             Partner With Us
                                             <ArrowRight className="ml-2 h-4 w-4" />
                                         </Button>
@@ -157,8 +156,9 @@ export default function LandingPage() {
                 </div>
 
                 {/* Scroll indicator */}
-                <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
-                    <div className="w-px h-16 bg-gradient-to-b from-transparent via-border to-border" />
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-medium">Scroll to explore</span>
+                    <div className="w-px h-20 bg-gradient-to-b from-border/50 via-border to-transparent" />
                 </div>
             </section>
 
@@ -168,33 +168,33 @@ export default function LandingPage() {
                     <div className="grid md:grid-cols-3 gap-0 md:divide-x divide-border">
                         {/* Value 1 */}
                         <div className="py-12 md:py-0 md:pr-16 space-y-6">
-                            <span className="font-display text-5xl font-light text-primary/30">01</span>
+                            <span className="font-display text-5xl font-light text-primary/10">01</span>
                             <div className="space-y-3">
-                                <h3 className="text-xl font-medium">Instant booking</h3>
+                                <h3 className="text-xl font-medium">Seamless facility management</h3>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    Reserve courts and spaces in seconds. Real-time availability means no waiting, no conflicts, no frustration.
+                                    From tennis courts to cricket grounds, manage your entire athletic portfolio with precision and ease.
                                 </p>
                             </div>
                         </div>
 
                         {/* Value 2 */}
                         <div className="py-12 md:py-0 md:px-16 space-y-6 border-t md:border-t-0 border-border">
-                            <span className="font-display text-5xl font-light text-primary/30">02</span>
+                            <span className="font-display text-5xl font-light text-primary/10">02</span>
                             <div className="space-y-3">
-                                <h3 className="text-xl font-medium">Complete visibility</h3>
+                                <h3 className="text-xl font-medium">Total member visibility</h3>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    See who&apos;s booked and when. Coordinate with fellow members seamlessly across your community.
+                                    Real-time availability and coordination for exclusive communities who value their members&apos; time.
                                 </p>
                             </div>
                         </div>
 
                         {/* Value 3 */}
                         <div className="py-12 md:py-0 md:pl-16 space-y-6 border-t md:border-t-0 border-border">
-                            <span className="font-display text-5xl font-light text-primary/30">03</span>
+                            <span className="font-display text-5xl font-light text-primary/10">03</span>
                             <div className="space-y-3">
-                                <h3 className="text-xl font-medium">Tailored experience</h3>
+                                <h3 className="text-xl font-medium">Bespoke configurations</h3>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    Custom branding, custom rules, custom everything. Built around your community&apos;s unique needs.
+                                    Custom rules, tailored branding, and granular control designed for the world&apos;s most prestigious estates.
                                 </p>
                             </div>
                         </div>
@@ -214,7 +214,7 @@ export default function LandingPage() {
                         {/* Left - Text */}
                         <div className="space-y-8">
                             <h2 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-tight">
-                                Tailored to your community
+                                Infrastructure tailored to your community
                             </h2>
                             <p className="text-xl text-muted-foreground leading-relaxed">
                                 Every partnership begins with a conversation. We work with you to understand your space, your members, and your&nbsp;vision.
@@ -230,12 +230,12 @@ export default function LandingPage() {
                         {/* Right - Features list */}
                         <div className="space-y-0 divide-y divide-border border-y border-border">
                             {[
-                                'Unlimited spaces and courts',
+                                'Unlimited athletic facilities and courts',
                                 'Real-time booking with live availability',
-                                'Member directory and profiles',
-                                'Custom branding for your community',
-                                'Analytics and usage insights',
-                                'Dedicated support',
+                                'Exclusive member directory and profiles',
+                                'Bespoke branding for your community',
+                                'Advanced analytics and usage insights',
+                                'Dedicated concierge-level support',
                             ].map((feature, i) => (
                                 <div key={i} className="py-5 flex items-center gap-4">
                                     <span className="text-xs font-medium text-muted-foreground w-6">
@@ -261,8 +261,8 @@ export default function LandingPage() {
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                             <Link href="/contact">
-                                <Button size="lg" className="h-12 px-8">
-                                    Contact Us
+                                <Button size="lg" className="h-12 px-10 transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                                    Begin a Conversation
                                 </Button>
                             </Link>
                             <a
