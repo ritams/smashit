@@ -53,12 +53,15 @@ RUN adduser --system --uid 1001 nextjs
 # Selective copying based on APP_NAME using a bind mount
 RUN --mount=type=bind,from=builder,source=/app,target=/builder \
     if [ "$APP_NAME" = "@avith/web" ]; then \
-        cp -r /builder/apps/web/.next/standalone ./web-standalone && \
+        mkdir -p web-standalone && \
+        cp -r /builder/apps/web/.next/standalone/. ./web-standalone/ && \
+        mkdir -p web-standalone/apps/web/.next && \
         cp -r /builder/apps/web/.next/static ./web-standalone/apps/web/.next/static && \
         if [ -d "/builder/apps/web/public" ]; then \
             cp -r /builder/apps/web/public ./web-standalone/apps/web/public; \
         fi; \
     else \
+        mkdir -p apps/api packages/database && \
         cp -r /builder/node_modules ./node_modules && \
         cp -r /builder/apps/api/node_modules ./apps/api/node_modules && \
         cp -r /builder/apps/api/dist ./apps/api/dist && \
