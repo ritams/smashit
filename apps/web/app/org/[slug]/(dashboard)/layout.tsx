@@ -2,23 +2,12 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useParams, usePathname } from 'next/navigation';
-import { LogOut, Shield, User, LayoutGrid, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { getInitials } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { UserNav } from '@/components/layout/UserNav';
 
 export default function DashboardLayout({
     children,
@@ -101,54 +90,7 @@ export default function DashboardLayout({
                     </div>
 
                     {/* User Menu */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-muted transition-colors cursor-pointer outline-none">
-                                <Avatar className="h-7 w-7">
-                                    <AvatarImage src={session?.user?.image || ''} />
-                                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                                        {getInitials(session?.user?.name || 'U')}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <span className="hidden md:block text-sm font-medium">
-                                    {session?.user?.name}
-                                </span>
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel className="font-normal">
-                                <div className="flex flex-col space-y-1">
-                                    <p className="text-sm font-medium">{session?.user?.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {session?.user?.email}
-                                    </p>
-                                </div>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Link href={`/org/${orgSlug}/profile`} className="cursor-pointer">
-                                    <User className="mr-2 h-4 w-4" />
-                                    Profile
-                                </Link>
-                            </DropdownMenuItem>
-                            {isAdmin && (
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/org/${orgSlug}/admin`} className="cursor-pointer">
-                                        <Shield className="mr-2 h-4 w-4" />
-                                        Admin
-                                    </Link>
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={handleLogout}
-                                className="text-destructive cursor-pointer"
-                            >
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Sign out
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <UserNav orgSlug={orgSlug} isAdmin={isAdmin} />
                 </div>
             </header>
 

@@ -3,18 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { ArrowRight, LogOut, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { getInitials } from '@/lib/utils';
+import { UserNav } from '@/components/layout/UserNav';
 
 export default function LandingPage() {
     const { data: session } = useSession();
@@ -53,37 +44,7 @@ export default function LandingPage() {
                             </Link>
                             {session ? (
                                 <>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors cursor-pointer outline-none">
-                                                <Avatar className="h-7 w-7">
-                                                    <AvatarImage src={session.user?.image || ''} />
-                                                    <AvatarFallback className="text-xs font-medium bg-primary text-primary-foreground">
-                                                        {getInitials(session.user?.name || 'U')}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm font-medium hidden md:block">
-                                                    {session.user?.name}
-                                                </span>
-                                            </button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-48">
-                                            <DropdownMenuLabel className="font-normal">
-                                                <div className="flex flex-col space-y-1">
-                                                    <p className="text-sm font-medium">{session.user?.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{session.user?.email}</p>
-                                                </div>
-                                            </DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                                className="text-destructive focus:text-destructive cursor-pointer"
-                                                onClick={() => signOut({ callbackUrl: '/' })}
-                                            >
-                                                <LogOut className="mr-2 h-4 w-4" />
-                                                Sign out
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <UserNav showDashboardLink={true} />
                                     <Link href="/dashboard">
                                         <Button size="sm">Dashboard</Button>
                                     </Link>
