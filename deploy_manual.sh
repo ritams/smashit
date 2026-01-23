@@ -19,7 +19,7 @@ pnpm db:generate
 
 # Build application
 echo "🏗️  Building application..."
-pnpm turbo build
+pnpm turbo build --force
 
 # Reload PM2
 echo "🔄 Reloading PM2..."
