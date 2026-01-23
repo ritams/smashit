@@ -1,4 +1,4 @@
-# SmashIt - Multi-Tenant Booking Platform
+# Avith - Multi-Tenant Booking Platform
 
 A modern scheduling and booking application for organizations. Book spaces, manage slots, and coordinate with your team.
 
@@ -26,47 +26,34 @@ A modern scheduling and booking application for organizations. Book spaces, mana
 
 - Node.js 20+
 - pnpm 9+
-- Docker (for PostgreSQL and Redis)
+- PostgreSQL 15+
+- Redis 7+
 
 ### Installation
 
 1. **Clone and install dependencies**
    ```bash
    git clone <repo-url>
-   cd smashit
+   cd avith
    pnpm install
    ```
 
-2. **Start PostgreSQL and Redis**
+2. **Configure Environment Variables**
    ```bash
-   docker compose up -d
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   # Copy env files
    cp apps/api/.env.example apps/api/.env
    cp apps/web/.env.example apps/web/.env
    cp packages/database/.env.example packages/database/.env
    ```
+   Update the `.env` files with your local database credentials and API keys.
 
-4. **Set up Google OAuth** (for authentication)
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing
-   - Enable Google+ API
-   - Create OAuth 2.0 credentials
-   - Add `http://localhost:3000` to authorized origins
-   - Add `http://localhost:3000/api/auth/callback/google` to redirect URIs
-   - Copy Client ID and Secret to `apps/web/.env`
-
-5. **Initialize database**
+3. **Initialize database**
    ```bash
    pnpm db:generate
    pnpm db:push
    pnpm db:seed
    ```
 
-6. **Start development servers**
+4. **Start development servers**
    ```bash
    pnpm dev
    ```
@@ -74,17 +61,33 @@ A modern scheduling and booking application for organizations. Book spaces, mana
    - Frontend: http://localhost:3000
    - API: http://localhost:4000
 
-### Development URLs
+## Deployment (Manual)
 
-For local development, use path-based routing:
-- Login: http://localhost:3000/login?org=demo-org
-- Book: http://localhost:3000/org/demo-org/book
-- Admin: http://localhost:3000/org/demo-org/admin
+This project is configured for manual deployment using PM2 on a VPS (e.g., Digital Ocean).
+
+### Server Setup
+
+See [docs/SETUP.md](docs/SETUP.md) for detailed server provisioning instructions (installing Node, PM2, Postgres, Redis).
+
+### Deploying
+
+1. **Push changes** to your repository.
+2. **SSH into your server**.
+3. **Run the deployment script**:
+   ```bash
+   ./deploy_manual.sh
+   ```
+
+   This script will:
+   - Pull the latest changes
+   - Install dependencies
+   - Build the application
+   - Reload the PM2 processes
 
 ## Project Structure
 
 ```
-smashit/
+avith/
 ├── apps/
 │   ├── web/          # Next.js frontend
 │   └── api/          # Express backend
@@ -92,8 +95,8 @@ smashit/
 │   ├── database/     # Prisma schema & client
 │   ├── types/        # Shared TypeScript types
 │   └── validators/   # Zod validation schemas
-├── docker-compose.yml
-└── turbo.json
+├── ecosystem.config.js # PM2 configuration
+└── deploy_manual.sh    # Deployment script
 ```
 
 ## Scripts
