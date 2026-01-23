@@ -17,6 +17,14 @@ pnpm install --frozen-lockfile
 echo "🗄️  Generating Database Client..."
 pnpm db:generate
 
+# Clean previous builds and cache
+echo "🧹 Cleaning previous builds..."
+rm -rf dist
+rm -rf apps/*/dist
+rm -rf packages/*/dist
+rm -rf .turbo
+rm -rf node_modules/.cache
+
 # Build application
 echo "🏗️  Building application..."
 pnpm turbo build --force
