@@ -88,7 +88,7 @@ export async function cancelBooking(bookingId: string) {
 }
 
 /**
- * Verify a space belongs to an organization
+ * Verify a space belongs to an organization and fetch its rules
  */
 export async function verifySpaceOwnership(spaceId: string, orgId: string) {
     return prisma.space.findFirst({
@@ -97,6 +97,11 @@ export async function verifySpaceOwnership(spaceId: string, orgId: string) {
             orgId,
             isActive: true,
         },
-        include: { rules: true },
+        include: {
+            facility: {
+                include: { rules: true },
+            },
+        },
     });
 }
+

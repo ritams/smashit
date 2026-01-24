@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getInitials } from '@/lib/utils';
+import { getInitials, cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import {
     Table,
@@ -80,69 +80,93 @@ export default function MembersPage() {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="font-display text-2xl font-medium tracking-tight">Members</h1>
-                    <p className="text-muted-foreground mt-1">
-                        View and manage members of your organization.
+        <div className="space-y-16">
+            <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 text-muted-foreground/40 uppercase tracking-[.2em] text-[11px] font-bold">
+                        <Users className="h-4 w-4" />
+                        Community
+                    </div>
+                    <h1 className="font-display text-4xl font-medium tracking-tight text-foreground leading-tight">
+                        Member <span className="text-muted-foreground/30 font-light italic">Directory</span>
+                    </h1>
+                    <p className="text-lg text-muted-foreground/60 max-w-2xl font-light">
+                        Review and manage your organization's members, roles, and administrative access levels.
                     </p>
                 </div>
-                <div className="relative w-full sm:w-72">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <div className="relative w-full sm:w-80 group">
+                    <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                     <Input
-                        placeholder="Search members..."
-                        className="pl-9"
+                        placeholder="Search by name or email..."
+                        className="pl-11 h-12 bg-background/50 border-border/40 rounded-2xl focus:ring-primary/10 transition-all relative"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-            </div>
+            </header>
 
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+            <div className="border-t border-border/40 pt-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <Table>
                     <TableHeader>
-                        <TableRow>
-                            <TableHead>Member</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
+                        <TableRow className="hover:bg-transparent border-none">
+                            <TableHead className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[.25em] h-12">Member</TableHead>
+                            <TableHead className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[.25em] h-12">Email</TableHead>
+                            <TableHead className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[.25em] h-12 text-center">Privileges</TableHead>
+                            <TableHead className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[.25em] h-12 text-right">Details</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredMembers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                                    No members found.
+                                <TableCell colSpan={4} className="h-64 text-center">
+                                    <div className="flex flex-col items-center justify-center opacity-40">
+                                        <Users className="h-8 w-8 mb-4 stroke-[1.5]" />
+                                        <p className="text-sm font-light italic">No match found in the directory</p>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredMembers.map((member) => (
                                 <TableRow
                                     key={member.id}
-                                    className="cursor-pointer hover:bg-muted/50"
+                                    className="group cursor-pointer hover:bg-primary/[0.01] border-border/10 transition-colors duration-300"
                                     onClick={() => router.push(`/org/${orgSlug}/admin/members/${member.id}`)}
                                 >
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage src={member.image || ''} />
-                                                <AvatarFallback>
-                                                    {getInitials(member.name || 'U')}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="font-medium">{member.name || 'Unnamed'}</div>
+                                    <TableCell className="py-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative">
+                                                <Avatar className="h-11 w-11 rounded-xl ring-2 ring-background border border-border/10">
+                                                    <AvatarImage src={member.image || ''} className="object-cover" />
+                                                    <AvatarFallback className="bg-primary/[0.03] text-primary/60 text-xs font-bold leading-none">
+                                                        {getInitials(member.name || 'U')}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                {member.role === 'ADMIN' && (
+                                                    <div className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full border-2 border-background" />
+                                                )}
+                                            </div>
+                                            <div className="font-medium text-foreground/80 tracking-tight group-hover:text-primary transition-colors duration-300">
+                                                {member.name || 'Unnamed Member'}
+                                            </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{member.email}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'} className="text-xs">
-                                            {member.role}
-                                        </Badge>
+                                    <TableCell className="text-sm text-muted-foreground/60 font-medium tabular-nums font-mono lowercase tracking-tight">
+                                        {member.email}
                                     </TableCell>
-                                    <TableCell>
-                                        <span className="text-muted-foreground">
-                                            <UserIcon className="h-4 w-4 opacity-50" />
+                                    <TableCell className="text-center">
+                                        <span className={cn(
+                                            "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                                            member.role === 'ADMIN'
+                                                ? "bg-primary/10 text-primary"
+                                                : "bg-muted/30 text-muted-foreground/60"
+                                        )}>
+                                            {member.role}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground/30 group-hover:text-primary group-hover:bg-primary/5 transition-all duration-300">
+                                            <UserIcon className="h-4 w-4" />
                                         </span>
                                     </TableCell>
                                 </TableRow>
@@ -151,9 +175,12 @@ export default function MembersPage() {
                     </TableBody>
                 </Table>
             </div>
-            <div className="text-xs text-muted-foreground text-center">
-                Showing {filteredMembers.length} of {members.length} members
-            </div>
+
+            <footer className="flex items-center justify-center pt-8 border-t border-border/40">
+                <p className="text-[10px] font-bold text-muted-foreground/20 uppercase tracking-[.3em]">
+                    Showing {filteredMembers.length} <span className="mx-2">•</span> {members.length} Total Members
+                </p>
+            </footer>
         </div>
     );
 }

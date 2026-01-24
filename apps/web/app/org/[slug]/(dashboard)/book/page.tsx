@@ -57,12 +57,14 @@ export default function BookPage() {
 
     const urlDate = searchParams.get('date');
     const urlCategory = searchParams.get('category');
+    const urlFacilityId = searchParams.get('facilityId');
     const initialDate = urlDate ? new Date(urlDate) : startOfToday();
 
+    const [facilities, setFacilities] = useState<any[]>([]);
     const [spaces, setSpaces] = useState<Space[]>([]);
     const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(urlCategory);
+    const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(urlFacilityId);
     const [loadingSpaces, setLoadingSpaces] = useState(true);
     const [mounted, setMounted] = useState(false);
     const [viewDate, setViewDate] = useState<Date>(initialDate);
@@ -85,39 +87,33 @@ export default function BookPage() {
     const [cancelInfo, setCancelInfo] = useState<CancelBookingInfo | null>(null);
     const [isCanceling, setIsCanceling] = useState(false);
 
-    // Get unique categories from spaces
-    const availableCategories = useMemo(() => {
-        const types = [...new Set(spaces.map(s => s.type))];
-        return types.filter(t => t in SPACE_TYPES).sort();
-    }, [spaces]);
-
-    // Set default category when spaces load
+    // Set default facility when loaded
     useEffect(() => {
-        if (availableCategories.length > 0 && !selectedCategory) {
-            setSelectedCategory(availableCategories[0]);
+        if (facilities.length > 0 && !selectedFacilityId) {
+            setSelectedFacilityId(facilities[0].id);
         }
-    }, [availableCategories, selectedCategory]);
+    }, [facilities, selectedFacilityId]);
 
     // Sync state to URL
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const newDate = format(selectedDate, 'yyyy-MM-dd');
         const currentDate = params.get('date');
-        const currentCategory = params.get('category');
+        const currentFacilityId = params.get('facilityId');
 
         let changed = false;
         if (currentDate !== newDate) {
             params.set('date', newDate);
             changed = true;
         }
-        if (selectedCategory && currentCategory !== selectedCategory) {
-            params.set('category', selectedCategory);
+        if (selectedFacilityId && currentFacilityId !== selectedFacilityId) {
+            params.set('facilityId', selectedFacilityId);
             changed = true;
         }
         if (changed) {
             router.replace(`?${params.toString()}`, { scroll: false });
         }
-    }, [selectedDate, selectedCategory, router]);
+    }, [selectedDate, selectedFacilityId, router]);
 
     useEffect(() => {
         setMounted(true);
@@ -136,15 +132,25 @@ export default function BookPage() {
 
     const weekDates = Array.from({ length: 7 }, (_, i) => addDays(viewDate, i));
 
-    // Fetch spaces
-    const fetchSpaces = useCallback(async () => {
+    // Fetch data
+    const fetchData = useCallback(async () => {
         try {
             setAccessDenied(false);
-            const data = await api.getSpaces(orgSlug);
-            setSpaces(data);
-            if (data.length > 0 && !selectedSpace) {
-                setSelectedSpace(data[0]);
-                setMobileSelectedSpace(data[0]);
+            // Fetch facilities and spaces independently to prevent one failure from blocking the other
+            try {
+                const facilitiesData = await api.getFacilities(orgSlug);
+                setFacilities(facilitiesData);
+            } catch (err) {
+                console.error('Failed to fetch facilities:', err);
+                toast.error('Could not load facilities');
+            }
+
+            try {
+                const spacesData = await api.getSpaces(orgSlug);
+                setSpaces(spacesData);
+            } catch (err: any) {
+                console.error('Failed to fetch spaces:', err);
+                // Don't show toast for every error to avoid spam, relying on SSE/AllSpacesView for critical data
             }
 
             // Check if admin
@@ -174,18 +180,18 @@ export default function BookPage() {
     }, [orgSlug, selectedSpace]);
 
     useEffect(() => {
-        fetchSpaces();
-    }, [fetchSpaces]);
+        fetchData();
+    }, [fetchData]);
 
     // SSE for real-time updates
     const handleSSEMessage = useCallback((msg: any) => {
         if (msg.type === 'BOOKING_CREATED' || msg.type === 'BOOKING_CANCELLED' || msg.type === 'SPACE_UPDATED') {
             if (msg.type === 'SPACE_UPDATED') {
-                fetchSpaces();
+                fetchData();
             }
             setAllSpacesRefreshKey(prev => prev + 1);
         }
-    }, [fetchSpaces]);
+    }, [fetchData]);
 
     useSSE({
         orgSlug,
@@ -253,107 +259,96 @@ export default function BookPage() {
 
     return (
         <div className="h-full flex flex-col">
-            <DateSelector
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                viewDate={viewDate}
-                onViewDateChange={setViewDate}
-                weekDates={weekDates}
-            />
+            {/* Unified Sticky Header */}
+            <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border/40 py-2 mb-4">
+                <div className="w-full px-4 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
 
-            {/* Mobile Categories - Pills (Kept here as it's often contextual to the layout below date) */}
-            <div className="md:hidden pb-2">
-                {/* Mobile View Controls Container */}
-                {availableCategories.length > 0 && (
-                    <div className="w-full overflow-x-auto no-scrollbar px-4 pb-1">
-                        <div className="flex items-center gap-2">
-                            {availableCategories.map((type) => (
+                    {/* Date Selector (Left) */}
+                    <div className="flex-shrink-0">
+                        <DateSelector
+                            selectedDate={selectedDate}
+                            onSelectDate={setSelectedDate}
+                            viewDate={viewDate}
+                            onViewDateChange={setViewDate}
+                            weekDates={weekDates}
+                        />
+                    </div>
+
+                    {/* Facilities (Right) - Desktop */}
+                    <div className="hidden md:flex items-center justify-end gap-1 min-w-0 flex-1 pl-4">
+                        {facilities.slice(0, 4).map((fac) => {
+                            const isActive = selectedFacilityId === fac.id;
+                            return (
                                 <button
-                                    key={type}
-                                    onClick={() => setSelectedCategory(type === selectedCategory ? null : type)}
+                                    key={fac.id}
+                                    onClick={() => setSelectedFacilityId(fac.id)}
                                     className={cn(
-                                        "flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap",
-                                        selectedCategory === type
-                                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                        "relative px-3 py-1.5 rounded-md text-sm transition-all duration-200",
+                                        isActive
+                                            ? "text-primary font-semibold bg-primary/5"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                    )}
+                                >
+                                    {fac.name}
+                                    {isActive && (
+                                        <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary rounded-full" />
+                                    )}
+                                </button>
+                            );
+                        })}
+
+                        {facilities.length > 4 && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        className={cn(
+                                            "flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ml-1",
+                                            facilities.slice(4).some(f => f.id === selectedFacilityId)
+                                                ? "text-primary bg-primary/5"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                        )}
+                                    >
+                                        More
+                                        <span className="text-[10px] ml-0.5">▼</span>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    {facilities.slice(4).map((fac) => (
+                                        <DropdownMenuItem
+                                            key={fac.id}
+                                            onClick={() => setSelectedFacilityId(fac.id)}
+                                            className={cn(
+                                                "cursor-pointer",
+                                                selectedFacilityId === fac.id && "bg-primary/5 text-primary font-medium"
+                                            )}
+                                        >
+                                            {fac.name}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
+
+                    {/* Mobile Facilities - Dropdown / Horizontal Scroll fallback */}
+                    <div className="md:hidden w-full overflow-x-auto no-scrollbar pb-1">
+                        <div className="flex items-center gap-2">
+                            {facilities.map((fac) => (
+                                <button
+                                    key={fac.id}
+                                    onClick={() => setSelectedFacilityId(fac.id)}
+                                    className={cn(
+                                        "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap",
+                                        selectedFacilityId === fac.id
+                                            ? "bg-primary/10 border-primary/20 text-primary"
                                             : "bg-background border-border text-muted-foreground"
                                     )}
                                 >
-                                    {SPACE_TYPES[type as SpaceType]?.label || type}
+                                    {fac.name}
                                 </button>
                             ))}
                         </div>
                     </div>
-                )}
-            </div>
-
-            <div className="hidden md:block w-full">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-4 mb-4">
-                    {/* Category Tabs (Desktop) */}
-                    {/* Moved Category logic to stay near where it was used, or can be extracted further */}
-                    <div className="flex-1"></div> {/* Spacer if needed or just align right */}
-
-                    {availableCategories.length > 0 && (
-                        <div className="flex items-center gap-8 mr-1 border-b border-border/50 pb-2">
-                            {(() => {
-                                const MAX_VISIBLE = 5;
-                                const showMore = availableCategories.length > MAX_VISIBLE;
-                                const visible = showMore ? availableCategories.slice(0, MAX_VISIBLE) : availableCategories;
-                                const hidden = showMore ? availableCategories.slice(MAX_VISIBLE) : [];
-                                const isHiddenSelected = selectedCategory && hidden.includes(selectedCategory);
-
-                                return (
-                                    <>
-                                        {visible.map((type) => {
-                                            const config = SPACE_TYPES[type as SpaceType];
-                                            const isActive = selectedCategory === type;
-                                            return (
-                                                <button
-                                                    key={type}
-                                                    onClick={() => setSelectedCategory(type)}
-                                                    className={cn(
-                                                        'text-sm font-medium transition-all pb-1 whitespace-nowrap',
-                                                        isActive
-                                                            ? 'text-primary border-b-2 border-primary'
-                                                            : 'text-muted-foreground hover:text-foreground border-b-2 border-transparent'
-                                                    )}
-                                                >
-                                                    {config?.label || type}
-                                                </button>
-                                            );
-                                        })}
-
-                                        {hidden.length > 0 && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <button
-                                                        className={cn(
-                                                            'text-sm font-medium transition-all pb-1 flex items-center gap-1',
-                                                            isHiddenSelected
-                                                                ? 'text-primary border-b-2 border-primary'
-                                                                : 'text-muted-foreground hover:text-foreground border-b-2 border-transparent'
-                                                        )}
-                                                    >
-                                                        More
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    {hidden.map((type) => (
-                                                        <DropdownMenuItem
-                                                            key={type}
-                                                            onClick={() => setSelectedCategory(type)}
-                                                            className={cn(selectedCategory === type && "bg-muted")}
-                                                        >
-                                                            {SPACE_TYPES[type as SpaceType]?.label || type}
-                                                        </DropdownMenuItem>
-                                                    ))}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -363,8 +358,7 @@ export default function BookPage() {
                 <AllSpacesView
                     date={selectedDate}
                     orgSlug={orgSlug}
-                    spaceType={selectedCategory || undefined}
-                    categoryName={selectedCategory ? (SPACE_TYPES[selectedCategory as SpaceType]?.label || selectedCategory) : undefined}
+                    facilityId={selectedFacilityId || undefined}
                     refreshTrigger={allSpacesRefreshKey}
                     viewMode={viewMode}
                     mobileSelectedSpaceId={mobileSelectedSpace?.id}

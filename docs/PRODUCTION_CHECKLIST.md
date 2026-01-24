@@ -73,8 +73,11 @@ DATABASE_URL="postgresql://user:password@host:5432/avith?sslmode=require"
 ```
 
 ### 2. Run Migrations
+Currently, the project uses `pnpm prisma migrate deploy` to sync the schema safely. This is automated in `deploy_manual.sh`.
+
 ```bash
-pnpm db:push
+# Manual sync if needed
+pnpm prisma migrate deploy --schema packages/database/prisma/schema.prisma
 ```
 
 ---
@@ -96,7 +99,7 @@ REDIS_URL="redis://user:password@host:6379"
 - [ ] Google OAuth credentials are for production
 - [ ] `CORS_ORIGIN` points to production domain
 - [ ] `NEXTAUTH_URL` points to production domain
-- [ ] Database is migrated (`pnpm db:push`)
+- [ ] Database is migrated (`prisma migrate deploy`)
 - [ ] Redis is accessible
 - [ ] SSL/TLS configured for all connections
 
@@ -105,9 +108,6 @@ REDIS_URL="redis://user:password@host:6379"
 ## 🚀 Build & Deploy
 
 ```bash
-# Build all packages
-pnpm build
-
-# Start production servers
-pnpm start
+# Run the automated deployment script
+./deploy_manual.sh
 ```

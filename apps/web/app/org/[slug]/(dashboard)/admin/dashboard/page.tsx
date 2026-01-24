@@ -87,41 +87,60 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h1 className="font-display text-2xl font-medium tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground mt-1">
-                    Overview of your organization's activity and resources.
+        <div className="space-y-16">
+            <header>
+                <div className="flex items-center gap-3 mb-4 text-muted-foreground/40 uppercase tracking-[.2em] text-[11px] font-bold">
+                    <Activity className="h-4 w-4" />
+                    Overview
+                </div>
+                <h1 className="font-display text-4xl font-medium tracking-tight text-foreground leading-tight">
+                    Organization <span className="text-muted-foreground/30 font-light italic">Insights</span>
+                </h1>
+                <p className="text-lg text-muted-foreground/60 mt-4 max-w-2xl font-light">
+                    Monitor your organization's resource utilization, member engagement, and scheduling trends at a glance.
                 </p>
-            </div>
+            </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Premium Stat Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-10 border-t border-border/40 pt-12">
                 {statItems.map((item, index) => (
-                    <Card key={index} className="bg-card/50 border-border/60 shadow-sm hover:shadow-md transition-all">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                    <div key={index} className="group space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[.25em]">
                                 {item.title}
-                            </CardTitle>
-                            <item.icon className="h-4 w-4 text-primary/70" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{item.value}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {item.description}
-                            </p>
-                        </CardContent>
-                    </Card>
+                            </h3>
+                            <item.icon className="h-3.5 w-3.5 text-primary/30 group-hover:text-primary transition-colors duration-500" />
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-5xl font-display font-medium tracking-tighter text-foreground tabular-nums">
+                                {item.value}
+                            </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground/50 font-medium tracking-wide">
+                            {item.description}
+                        </p>
+                    </div>
                 ))}
             </div>
 
-            {/* Placeholder for future analytics charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
-                <Card className="bg-card/30 border-dashed border-border/60 shadow-none">
-                    <CardContent className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-                        <TrendingUp className="h-8 w-8 mb-3 opacity-20" />
-                        <p className="text-sm">Detailed analytics coming soon</p>
-                    </CardContent>
-                </Card>
+            {/* Activity & Trends Section */}
+            <div className="pt-16 border-t border-border/40">
+                <div className="flex items-center gap-3 mb-8 text-muted-foreground/40 uppercase tracking-[.2em] text-[11px] font-bold">
+                    <TrendingUp className="h-4 w-4" />
+                    Activity Analytics
+                </div>
+
+                <div className="relative group">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.02] to-transparent rounded-[2rem] -m-4 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <div className="relative border border-dashed border-border/60 rounded-[2.5rem] p-16 text-center flex flex-col items-center justify-center min-h-[300px] overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(var(--primary-rgb),0.03)_0%,transparent_70%)]" />
+                        <Activity className="h-10 w-10 mb-6 text-primary/10 animate-pulse" />
+                        <h4 className="text-xl font-medium text-foreground/80 mb-2">Generating Advanced Analytics</h4>
+                        <p className="text-sm text-muted-foreground/60 max-w-sm mx-auto leading-relaxed">
+                            We're aggregating historical data to provide deeper insights into your booking patterns and space popularity.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );

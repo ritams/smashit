@@ -5,6 +5,7 @@ import { userRoutes } from './routes/user.routes.js';
 import { spaceRoutes } from './routes/space.routes.js';
 import { bookingRoutes } from './routes/booking.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
+import { facilityRoutes } from './routes/facility.routes.js';
 import { sseRoutes } from './routes/sse.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/request-logger.middleware.js';
@@ -61,11 +62,13 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/users', userRoutes);
-app.use('/api/orgs', orgRoutes);
 app.use('/api/orgs/:slug/spaces', spaceRoutes);
 app.use('/api/orgs/:slug/bookings', bookingRoutes);
 app.use('/api/orgs/:slug/admin', adminRoutes);
+app.use('/api/orgs/:slug/facilities', facilityRoutes);
+app.use('/api/orgs', orgRoutes);
 app.use('/api/events', sseRoutes);
+
 
 // 404 Handler
 app.use((_req, _res, next) => {

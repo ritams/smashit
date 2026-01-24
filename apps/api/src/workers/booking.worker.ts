@@ -14,15 +14,19 @@ export const processBooking = async (job: Job<BookingJobData>) => {
     const start = new Date(startTime);
     const end = new Date(endTime);
 
-    // Fetch space with rules for validation
+    // Fetch space with facility and rules for validation
     const space = await prisma.space.findUnique({
         where: { id: spaceId },
-        include: { rules: true }
+        include: {
+            facility: {
+                include: { rules: true }
+            }
+        }
     });
 
     if (!space) throw new Error('SPACE_NOT_FOUND');
 
-    const rules = space.rules;
+    const rules = space.facility?.rules;
 
     // === RULE VALIDATION === (Skip for admins)
     if (rules && !isAdmin) {
@@ -65,11 +69,13 @@ export const processBooking = async (job: Job<BookingJobData>) => {
             const dayEnd = new Date(start);
             dayEnd.setHours(23, 59, 59, 999);
 
-            // Get all spaces of the same type in this org
+            // Get all spaces of the same type in this org (across all facilities of that type)
             const sameTypeSpaces = await prisma.space.findMany({
                 where: {
                     orgId: space.orgId,
-                    type: space.type,
+                    facility: {
+                        type: space.facility.type,
+                    },
                     isActive: true
                 },
                 select: { id: true }
@@ -86,7 +92,12 @@ export const processBooking = async (job: Job<BookingJobData>) => {
                 }
             });
 
-            log.debug('Rule check', { maxBookingsPerUserPerDay: rules.maxBookingsPerUserPerDay, userBookingsToday, spaceType: space.type, sameTypeSpaces: sameTypeSpaceIds.length });
+            log.debug('Rule check', {
+                maxBookingsPerUserPerDay: rules.maxBookingsPerUserPerDay,
+                userBookingsToday,
+                facilityType: space.facility.type,
+                sameTypeSpaces: sameTypeSpaceIds.length
+            });
 
             if (userBookingsToday >= rules.maxBookingsPerUserPerDay) {
                 throw new Error('MAX_BOOKINGS_PER_USER_PER_DAY_EXCEEDED');

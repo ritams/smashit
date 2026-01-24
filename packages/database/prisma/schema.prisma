@@ -48,27 +48,49 @@ model Organization {
   settings    Json         @default("{}")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  facilities  Facility[]
   spaces      Space[]
   memberships Membership[]
+}
+
+model Facility {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String   @default("GENERIC")
+  location    String?
+  mapLink     String?
+  imageUrls   String[] @default([])
+  guidelines  String[] @default([])
+  orgId       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org     Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  spaces  Space[]
+  rules   BookingRules?
+
+  @@index([orgId])
 }
 
 model Space {
   id          String   @id @default(uuid())
   name        String
-  description String?
   capacity    Int      @default(1)
   isActive    Boolean  @default(true)
   orgId       String
-  type        String   @default("GENERIC") // "MEETING_ROOM", "SPORTS", etc.
+  facilityId  String
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   org      Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  rules    BookingRules?
+  facility Facility      @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   bookings Booking[]
   slots    Slot[]
 
   @@index([orgId])
+  @@index([facilityId])
 }
 
 model Slot {
@@ -89,7 +111,7 @@ model Slot {
 
 model BookingRules {
   id              String  @id @default(uuid())
-  spaceId         String  @unique
+  facilityId      String  @unique
   slotDurationMin Int     @default(60)
   openTime        String  @default("09:00")
   closeTime       String  @default("21:00")
@@ -98,12 +120,12 @@ model BookingRules {
   allowRecurring  Boolean @default(false)
   bufferMinutes   Int     @default(0)
   
-  // New granular rules
+  // Granular rules
   maxBookingsPerUserPerDay Int?
   maxTotalBookingsPerDay   Int?
   maxActiveBookingsPerUser Int?
 
-  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 }
 
 model Booking {

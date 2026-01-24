@@ -1,8 +1,16 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '@avith/database';
-import { createSpaceSchema, updateSpaceSchema, updateBookingRulesSchema, updateOrganizationSchema } from '@avith/validators';
+import {
+    createFacilitySchema,
+    updateFacilitySchema,
+    createSpaceSchema,
+    updateSpaceSchema,
+    updateBookingRulesSchema,
+    updateOrganizationSchema
+} from '@avith/validators';
 import { broadcastBookingUpdate } from '../services/sse.service.js';
 import { AuthRequest } from '../middleware/auth.middleware.js';
+import { OrgService } from '../services/org.service.js';
 
 /**
  * Admin controller - handles all admin route business logic
@@ -25,8 +33,6 @@ function getSlotName(type: string, number: number): string {
     const prefix = SLOT_PREFIXES[type] || 'Slot';
     return `${prefix} ${number}`;
 }
-
-import { OrgService } from '../services/org.service.js';
 
 /** Update organization settings (allowed domains/emails) */
 export async function updateSettings(req: AuthRequest, res: Response, next: NextFunction) {
@@ -108,11 +114,32 @@ export async function getMembers(req: AuthRequest, res: Response, next: NextFunc
     }
 }
 
-/** Create a new space */
-export async function createSpace(req: AuthRequest, res: Response, next: NextFunction) {
+/** List all facilities with their spaces */
+export async function getFacilities(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-        const data = createSpaceSchema.parse(req.body);
-        const space = await prisma.space.create({
+        const facilities = await prisma.facility.findMany({
+            where: { orgId: req.org!.id },
+            include: {
+                spaces: {
+                    where: { isActive: true },
+                    include: { slots: true },
+                },
+                rules: true,
+            },
+            orderBy: { name: 'asc' },
+        });
+
+        res.json({ success: true, data: facilities });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/** Create a new facility */
+export async function createFacility(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+        const data = createFacilitySchema.parse(req.body);
+        const facility = await prisma.facility.create({
             data: {
                 ...data,
                 orgId: req.org!.id,
@@ -127,14 +154,105 @@ export async function createSpace(req: AuthRequest, res: Response, next: NextFun
                         bufferMinutes: 0,
                     },
                 },
+            },
+            include: { rules: true },
+        });
+
+        res.status(201).json({ success: true, data: facility });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/** Update a facility */
+export async function updateFacility(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+        const { facilityId } = req.params as { facilityId: string };
+        const data = updateFacilitySchema.parse(req.body);
+
+        const facility = await prisma.facility.update({
+            where: { id: facilityId, orgId: req.org!.id },
+            data,
+            include: { rules: true },
+        });
+
+        res.json({ success: true, data: facility });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/** Update facility rules */
+export async function updateFacilityRules(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+        const { facilityId } = req.params as { facilityId: string };
+        const data = updateBookingRulesSchema.parse(req.body);
+
+        const rules = await prisma.bookingRules.update({
+            where: { facilityId },
+            data,
+        });
+
+        res.json({ success: true, data: rules });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/** Bulk update rules for multiple facilities */
+export async function bulkUpdateFacilityRules(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+        const { facilityIds, rules } = req.body;
+        const data = updateBookingRulesSchema.parse(rules);
+
+        await prisma.bookingRules.updateMany({
+            where: { facilityId: { in: facilityIds }, facility: { orgId: req.org!.id } },
+            data,
+        });
+
+        res.json({ success: true, message: 'Rules updated for selected facilities' });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/** Delete a facility */
+export async function deleteFacility(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+        const { facilityId } = req.params as { facilityId: string };
+        await prisma.facility.delete({ where: { id: facilityId, orgId: req.org!.id } });
+        res.json({ success: true, message: 'Facility deleted' });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/** Create a new space in a facility */
+export async function createSpace(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+        const data = createSpaceSchema.parse(req.body);
+        const facility = await prisma.facility.findFirst({
+            where: { id: data.facilityId, orgId: req.org!.id },
+        });
+
+        if (!facility) {
+            return res.status(404).json({ success: false, error: { message: 'Facility not found' } });
+        }
+
+        const space = await prisma.space.create({
+            data: {
+                name: data.name,
+                capacity: data.capacity,
+                facilityId: data.facilityId,
+                orgId: req.org!.id,
                 slots: {
-                    create: Array.from({ length: data.capacity }, (_, i) => ({
+                    create: Array.from({ length: data.capacity || 1 }, (_, i) => ({
                         number: i + 1,
-                        name: getSlotName(data.type || 'GENERIC', i + 1),
+                        name: getSlotName(facility.type, i + 1),
                     })),
                 },
             },
-            include: { rules: true, slots: true },
+            include: { slots: true },
         });
 
         res.status(201).json({ success: true, data: space });
@@ -149,21 +267,19 @@ export async function updateSpace(req: AuthRequest, res: Response, next: NextFun
         const { spaceId } = req.params as { spaceId: string };
         const data = updateSpaceSchema.parse(req.body);
 
-        // Verify space belongs to this org
         const existingSpace = await prisma.space.findFirst({
             where: { id: spaceId, orgId: req.org!.id },
+            include: { facility: true },
         });
+
         if (!existingSpace) {
-            return res.status(404).json({
-                success: false,
-                error: { code: 'SPACE_NOT_FOUND', message: 'Space not found or does not belong to this organization' },
-            });
+            return res.status(404).json({ success: false, error: { message: 'Space not found' } });
         }
 
         const space = await prisma.space.update({
             where: { id: spaceId },
             data,
-            include: { rules: true, slots: true },
+            include: { slots: { orderBy: { number: 'asc' } } },
         });
 
         // Handle capacity change
@@ -176,7 +292,7 @@ export async function updateSpace(req: AuthRequest, res: Response, next: NextFun
                     data: Array.from({ length: newSlotsCount }, (_, i) => ({
                         spaceId,
                         number: startNumber + i,
-                        name: getSlotName(space.type, startNumber + i),
+                        name: getSlotName(existingSpace.facility.type, startNumber + i),
                     })),
                 });
             } else {
@@ -187,21 +303,11 @@ export async function updateSpace(req: AuthRequest, res: Response, next: NextFun
 
             const updatedSpace = await prisma.space.findUnique({
                 where: { id: spaceId },
-                include: { rules: true, slots: { orderBy: { number: 'asc' } } },
-            });
-
-            broadcastBookingUpdate(req.org!.id, {
-                type: 'SPACE_UPDATED',
-                payload: { spaceId, date: new Date().toISOString().split('T')[0] } as any,
+                include: { slots: { orderBy: { number: 'asc' } } },
             });
 
             return res.json({ success: true, data: updatedSpace });
         }
-
-        broadcastBookingUpdate(req.org!.id, {
-            type: 'SPACE_UPDATED',
-            payload: { spaceId, date: new Date().toISOString().split('T')[0] } as any,
-        });
 
         res.json({ success: true, data: space });
     } catch (error) {
@@ -209,62 +315,7 @@ export async function updateSpace(req: AuthRequest, res: Response, next: NextFun
     }
 }
 
-/** Update booking rules for a space */
-export async function updateSpaceRules(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-        const { spaceId } = req.params as { spaceId: string };
-        const data = updateBookingRulesSchema.parse(req.body);
 
-        const existingSpace = await prisma.space.findFirst({
-            where: { id: spaceId, orgId: req.org!.id },
-        });
-        if (!existingSpace) {
-            return res.status(404).json({
-                success: false,
-                error: { code: 'SPACE_NOT_FOUND', message: 'Space not found or does not belong to this organization' },
-            });
-        }
-
-        const rules = await prisma.bookingRules.update({
-            where: { spaceId },
-            data,
-        });
-
-        res.json({ success: true, data: rules });
-    } catch (error) {
-        next(error);
-    }
-}
-
-/** Bulk update booking rules for multiple spaces */
-export async function bulkUpdateRules(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-        const { spaceIds, rules } = req.body;
-
-        if (!Array.isArray(spaceIds) || spaceIds.length === 0) {
-            return res.status(400).json({ success: false, error: { message: 'spaceIds array required' } });
-        }
-
-        const data = updateBookingRulesSchema.parse(rules);
-
-        const count = await prisma.space.count({
-            where: { id: { in: spaceIds }, orgId: req.org!.id },
-        });
-
-        if (count !== spaceIds.length) {
-            return res.status(403).json({ success: false, error: { message: 'Some spaces do not belong to this organization' } });
-        }
-
-        await prisma.bookingRules.updateMany({
-            where: { spaceId: { in: spaceIds } },
-            data,
-        });
-
-        res.json({ success: true, message: `Updated rules for ${count} spaces` });
-    } catch (error) {
-        next(error);
-    }
-}
 
 /** Soft delete a space */
 export async function deleteSpace(req: AuthRequest, res: Response, next: NextFunction) {

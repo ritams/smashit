@@ -15,6 +15,7 @@ spaceRoutes.use(ensureOrgAccess);
 
 // Get all spaces for an organization
 spaceRoutes.get('/', async (req: OrgRequest, res, next) => {
+    // Fetches spaces with facility rules
     try {
         const spaces = await prisma.space.findMany({
             where: {
@@ -22,7 +23,11 @@ spaceRoutes.get('/', async (req: OrgRequest, res, next) => {
                 isActive: true,
             },
             include: {
-                rules: true,
+                facility: {
+                    include: {
+                        rules: true,
+                    },
+                },
                 slots: { orderBy: { number: 'asc' } },
             },
             orderBy: { name: 'asc' },
@@ -114,7 +119,11 @@ spaceRoutes.get('/:spaceId', async (req: OrgRequest, res, next) => {
                 orgId: req.org!.id,
             },
             include: {
-                rules: true,
+                facility: {
+                    include: {
+                        rules: true,
+                    },
+                },
             },
         });
 

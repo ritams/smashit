@@ -10,10 +10,12 @@ export interface AllSpacesViewProps {
     onCancel: (data: CancelAction) => void;
     refreshTrigger?: number;
     spaceType?: string;
+    facilityId?: string;
     categoryName?: string;
     viewMode?: 'ALL' | 'SINGLE';
     mobileSelectedSpaceId?: string;
 }
+
 
 /** A booking entry */
 export interface Booking {
@@ -49,6 +51,7 @@ export interface SpaceAvailability {
     space: {
         id: string;
         name: string;
+        facilityId: string;
         type: string;
         capacity: number;
         slots: SubSlot[];
@@ -58,6 +61,7 @@ export interface SpaceAvailability {
     };
     slots: Slot[];
 }
+
 
 /** Column definition for grid view */
 export interface ColumnDef {

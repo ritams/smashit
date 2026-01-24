@@ -134,12 +134,16 @@ export const api = {
         apiClient<any>('/api/orgs', { method: 'POST', body: JSON.stringify(data), auth: true }),
     checkSlug: (slug: string) => apiClient<{ available: boolean }>(`/api/orgs/check-slug/${slug}`),
 
+    // Facilities (authenticated)
+    getFacilities: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/facilities`, { auth: true }),
+
     // Spaces (authenticated)
     getSpaces: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/spaces`, { auth: true }),
     getAvailability: (orgSlug: string, spaceId: string, date: string, timezone?: string) =>
         apiClient<any>(`/api/orgs/${orgSlug}/spaces/${spaceId}/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`, { auth: true }),
     getAllAvailability: (orgSlug: string, date: string, timezone?: string) =>
         apiClient<any>(`/api/orgs/${orgSlug}/spaces/all/availability?date=${date}${timezone ? `&timezone=${timezone}` : ''}`, { auth: true }),
+
 
     // Bookings (all authenticated)
     createBooking: (orgSlug: string, data: { spaceId: string; startTime: string; endTime: string; slotId?: string; slotIndex?: number; recurrence?: string; recurrenceCount?: number }) =>
@@ -165,16 +169,26 @@ export const api = {
     // Admin (all authenticated)
     getStats: (orgSlug: string) => apiClient<any>(`/api/orgs/${orgSlug}/admin/stats`, { auth: true }),
     getMembers: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/admin/members`, { auth: true }),
-    createSpace: (orgSlug: string, data: { name: string; description?: string; capacity?: number; type?: string }) =>
+
+    // Admin Facilities
+    getAdminFacilities: (orgSlug: string) => apiClient<any[]>(`/api/orgs/${orgSlug}/admin/facilities`, { auth: true }),
+    createFacility: (orgSlug: string, data: any) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/admin/facilities`, { method: 'POST', body: JSON.stringify(data), auth: true }),
+    updateFacility: (orgSlug: string, facilityId: string, data: any) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/admin/facilities/${facilityId}`, { method: 'PATCH', body: JSON.stringify(data), auth: true }),
+    updateFacilityRules: (orgSlug: string, facilityId: string, data: any) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/admin/facilities/${facilityId}/rules`, { method: 'PATCH', body: JSON.stringify(data), auth: true }),
+    deleteFacility: (orgSlug: string, facilityId: string) =>
+        apiClient<any>(`/api/orgs/${orgSlug}/admin/facilities/${facilityId}`, { method: 'DELETE', auth: true }),
+
+    // Admin Spaces
+    createSpace: (orgSlug: string, data: { name: string; facilityId: string; capacity?: number }) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces`, { method: 'POST', body: JSON.stringify(data), auth: true }),
     updateSpace: (orgSlug: string, spaceId: string, data: any) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/${spaceId}`, { method: 'PATCH', body: JSON.stringify(data), auth: true }),
-    updateSpaceRules: (orgSlug: string, spaceId: string, data: any) =>
-        apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/${spaceId}/rules`, { method: 'PATCH', body: JSON.stringify(data), auth: true }),
-    bulkUpdateSpaceRules: (orgSlug: string, data: { spaceIds: string[]; rules: any }) =>
-        apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/rules/bulk`, { method: 'POST', body: JSON.stringify(data), auth: true }),
     deleteSpace: (orgSlug: string, spaceId: string) =>
         apiClient<any>(`/api/orgs/${orgSlug}/admin/spaces/${spaceId}`, { method: 'DELETE', auth: true }),
+
 
     // Access Control
     updateOrgSettings: (orgSlug: string, data: { allowedDomains?: string[]; allowedEmails?: string[] }) =>

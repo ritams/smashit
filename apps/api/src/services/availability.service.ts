@@ -35,22 +35,24 @@ export async function getDetailedSpaceAvailability(params: AvailabilityParams) {
     const space = await prisma.space.findUnique({
         where: { id: spaceId },
         include: {
-            rules: true,
+            facility: {
+                include: { rules: true },
+            },
             slots: { orderBy: { number: 'asc' } },
         },
     });
 
-    if (!space || !space.rules) {
-        throw new Error('Space not found or rules missing');
+    if (!space || !space.facility || !space.facility.rules) {
+        throw new Error('Space, facility, or rules missing');
     }
 
     const timezone = orgTimezone || 'UTC';
-    const { rules } = space;
+    const { rules, type } = space.facility;
 
     // 1. Determine "Start of Day" in the requested timezone
     const clientDateString = `${date}T00:00:00`;
     const startOfDayUTC = fromZonedTime(clientDateString, timezone);
-    // ... rest of the function remains same, just ensuring logic is preserved
+
     // Parse open and close times from rules (e.g., "09:00", "17:00")
     const [openHourStr, openMinuteStr] = rules.openTime.split(':');
     const [closeHourStr, closeMinuteStr] = rules.closeTime.split(':');
@@ -129,11 +131,14 @@ export async function getDetailedSpaceAvailability(params: AvailabilityParams) {
         space: {
             id: space.id,
             name: space.name,
-            type: space.type,
+            facilityId: space.facilityId,
+            type,
             capacity: space.capacity,
             slots: space.slots,
-            rules: space.rules,
+            rules,
         },
         slots,
     };
 }
+
+

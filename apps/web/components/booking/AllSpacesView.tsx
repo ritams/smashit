@@ -21,6 +21,7 @@ export function AllSpacesView({
     onCancel,
     refreshTrigger,
     spaceType,
+    facilityId,
     categoryName,
     viewMode = 'ALL',
     mobileSelectedSpaceId
@@ -28,9 +29,17 @@ export function AllSpacesView({
     const { data: session } = useSession();
     const { data, loading } = useSpaceAvailability(orgSlug, date, refreshTrigger);
 
-    // Filter data by space type if provided
+    // Filter data by space type or facility if provided
     const filteredData = useMemo(() => {
-        let result = spaceType ? data.filter(d => d.space.type === spaceType) : data;
+        let result = data;
+
+        if (spaceType) {
+            result = result.filter(d => d.space.type === spaceType);
+        }
+
+        if (facilityId) {
+            result = result.filter(d => d.space.facilityId === facilityId);
+        }
 
         // Filter for Single View Mode
         if (viewMode === 'SINGLE' && mobileSelectedSpaceId) {
@@ -38,7 +47,7 @@ export function AllSpacesView({
         }
 
         return result;
-    }, [data, spaceType, viewMode, mobileSelectedSpaceId]);
+    }, [data, spaceType, facilityId, viewMode, mobileSelectedSpaceId]);
 
     // Generate time rows
     const timeRows = useMemo(() => {
@@ -144,6 +153,7 @@ export function AllSpacesView({
         </div>
     );
 }
+
 
 /** Booking legend for desktop */
 function Legend() {

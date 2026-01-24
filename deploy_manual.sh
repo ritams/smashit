@@ -14,9 +14,12 @@ git pull origin main
 echo "📦 Installing dependencies..."
 pnpm install --frozen-lockfile
 
-# Generate Database Client (managed by Turbo usually, but good to be explicit/safe)
-echo "🗄️  Generating Database Client..."
+# Generate Database Client & Sync Schema Safely
+echo "🗄️  Generating Database Client & Deploying Migrations..."
 pnpm db:generate
+pnpm prisma migrate deploy --schema packages/database/prisma/schema.prisma
+
+
 
 # Clean previous builds and cache
 echo "🧹 Cleaning previous builds..."

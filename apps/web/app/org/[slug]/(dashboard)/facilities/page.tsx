@@ -19,132 +19,25 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 
-// Category configuration
-const CATEGORY_CONFIG: Record<string, {
-    label: string;
-    shortLabel: string;
-    description: string;
-    location: string;
-    rules: string[];
-}> = {
-    BADMINTON: {
-        label: 'Badminton Courts',
-        shortLabel: 'Badminton',
-        description: 'Professional-grade badminton courts with international standard markings, premium flooring, and optimal lighting conditions for competitive and recreational play.',
-        location: 'Sports Complex, Ground Floor',
-        rules: [
-            'Non-marking shoes required',
-            'Bring your own rackets and shuttlecocks',
-            'Maximum 4 players per court',
-            'Please vacate court 5 minutes before slot ends'
-        ],
-    },
-    TENNIS: {
-        label: 'Tennis Courts',
-        shortLabel: 'Tennis',
-        description: 'Well-maintained outdoor tennis courts with quality playing surfaces. Perfect for both singles and doubles matches.',
-        location: 'Outdoor Sports Area, Near Main Gate',
-        rules: [
-            'Tennis shoes recommended',
-            'Equipment available on request',
-            'Maximum 4 players per court',
-            'Courts may close during adverse weather'
-        ],
-    },
-    TABLE_TENNIS: {
-        label: 'Table Tennis',
-        shortLabel: 'Table Tennis',
-        description: 'Indoor table tennis facilities with professional tables and climate-controlled environment for year-round play.',
-        location: 'Recreation Hall, First Floor',
-        rules: [
-            'Paddles and balls provided',
-            'Clean the table after use',
-            'Maximum 4 players per table',
-            'Indoor footwear only'
-        ],
-    },
-    FOOTBALL: {
-        label: 'Football Ground',
-        shortLabel: 'Football',
-        description: 'Full-size football ground with natural grass turf, goal posts, and floodlights for evening matches.',
-        location: 'Main Sports Field',
-        rules: [
-            'Studs allowed on grass surface',
-            'Bring your own football',
-            'Minimum 10 players for full booking',
-            'Ground maintenance on Mondays'
-        ],
-    },
-    BASKETBALL: {
-        label: 'Basketball Court',
-        shortLabel: 'Basketball',
-        description: 'Outdoor basketball court with professional hoops and markings. Ideal for pickup games and practice sessions.',
-        location: 'Outdoor Sports Area',
-        rules: [
-            'Basketball shoes required',
-            'Balls available at reception',
-            'Maximum 10 players per court',
-            'No food or drinks on court'
-        ],
-    },
-    CRICKET: {
-        label: 'Cricket Nets',
-        shortLabel: 'Cricket',
-        description: 'Practice nets with artificial turf pitch. Perfect for batting practice and bowling sessions.',
-        location: 'Cricket Ground, Adjacent to Main Field',
-        rules: [
-            'Helmets mandatory for batting',
-            'Bring your own cricket kit',
-            'Book full net for team practice',
-            'No leather balls without permission'
-        ],
-    },
-    SWIMMING: {
-        label: 'Swimming Pool',
-        shortLabel: 'Swimming',
-        description: 'Olympic-size swimming pool with separate lanes for lap swimming and recreational use.',
-        location: 'Aquatic Center',
-        rules: [
-            'Swimming cap mandatory',
-            'Shower before entering pool',
-            'Lifeguard on duty during open hours',
-            'Children must be accompanied'
-        ],
-    },
-    GENERIC: {
-        label: 'Other Facilities',
-        shortLabel: 'Other',
-        description: 'Additional recreational facilities available for booking.',
-        location: 'Various Locations',
-        rules: [
-            'Follow facility-specific guidelines',
-            'Respect other users',
-            'Return equipment after use'
-        ],
-    },
-};
-
-interface Space {
+interface Facility {
     id: string;
     name: string;
     description: string | null;
-    capacity: number;
-    isActive: boolean;
     type: string;
-    rules?: {
+    location: string | null;
+    mapLink: string | null;
+    imageUrls: string[];
+    guidelines: string[];
+    spaces: {
+        id: string;
+        name: string;
+        capacity: number;
+    }[];
+    rules: {
         openTime: string;
         closeTime: string;
         slotDurationMin: number;
-        maxAdvanceDays: number;
-    };
-}
-
-interface CategoryData {
-    type: string;
-    config: typeof CATEGORY_CONFIG[string];
-    spaces: Space[];
-    totalCapacity: number;
-    operatingHours: string;
+    } | null;
 }
 
 export default function FacilitiesPage() {
@@ -152,294 +45,229 @@ export default function FacilitiesPage() {
     const { data: session } = useSession();
     const orgSlug = params.slug as string;
 
-    const [spaces, setSpaces] = useState<Space[]>([]);
+    const [facilities, setFacilities] = useState<Facility[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeCategory, setActiveCategory] = useState<string | null>(null);
-    const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+    const [activeFacilityId, setActiveFacilityId] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchSpaces() {
+        async function fetchFacilities() {
             if (!session?.user?.email) return;
             setLoading(true);
             try {
-                const data = await api.getSpaces(orgSlug);
-                setSpaces(data.filter((s: Space) => s.isActive));
+                const data = await api.getFacilities(orgSlug);
+                setFacilities(data);
+                if (data.length > 0 && !activeFacilityId) {
+                    setActiveFacilityId(data[0].id);
+                }
             } catch (err) {
-                console.error('Failed to fetch spaces:', err);
+                console.error('Failed to fetch facilities:', err);
             }
             setLoading(false);
         }
-        fetchSpaces();
-    }, [orgSlug, session?.user?.email]);
+        fetchFacilities();
+    }, [orgSlug, session?.user?.email, activeFacilityId]);
 
-    // Group spaces by category with aggregated data
-    const categories = useMemo((): CategoryData[] => {
-        const groups: Record<string, Space[]> = {};
-        spaces.forEach(space => {
-            if (!groups[space.type]) groups[space.type] = [];
-            groups[space.type].push(space);
-        });
-
-        return Object.entries(groups).map(([type, typeSpaces]) => {
-            const config = CATEGORY_CONFIG[type] || CATEGORY_CONFIG.GENERIC;
-            const firstWithRules = typeSpaces.find(s => s.rules);
-            const operatingHours = firstWithRules?.rules
-                ? `${firstWithRules.rules.openTime} - ${firstWithRules.rules.closeTime}`
-                : '06:00 - 22:00';
-
-            return {
-                type,
-                config: { ...config, label: config.label || type },
-                spaces: typeSpaces,
-                totalCapacity: typeSpaces.reduce((sum, s) => sum + s.capacity, 0),
-                operatingHours,
-            };
-        }).sort((a, b) => a.config.label.localeCompare(b.config.label));
-    }, [spaces]);
-
-    // Set initial active category
-    useEffect(() => {
-        if (categories.length > 0 && !activeCategory) {
-            setActiveCategory(categories[0].type);
-        }
-    }, [categories, activeCategory]);
-
-    // Scroll to section when clicking sidebar
-    const scrollToSection = (type: string) => {
-        setActiveCategory(type);
-        const element = sectionRefs.current[type];
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    };
-
-    // Update active category on scroll
-    useEffect(() => {
-        const handleScroll = () => {
-            const offset = 150;
-            for (const category of categories) {
-                const element = sectionRefs.current[category.type];
-                if (element) {
-                    const rect = element.getBoundingClientRect();
-                    if (rect.top <= offset && rect.bottom > offset) {
-                        setActiveCategory(category.type);
-                        break;
-                    }
-                }
-            }
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [categories]);
+    const activeFacility = facilities.find(f => f.id === activeFacilityId);
 
     if (loading) {
         return (
-            <div className="flex gap-8">
-                <div className="hidden lg:block w-48 flex-shrink-0">
-                    <Skeleton className="h-64 rounded-xl" />
+            <div className="flex gap-12">
+                <div className="hidden lg:block w-56 flex-shrink-0">
+                    <Skeleton className="h-64 w-full rounded-2xl bg-muted/20" />
                 </div>
-                <div className="flex-1 py-8 space-y-12">
-                    <Skeleton className="h-10 w-64" />
-                    <Skeleton className="h-6 w-96" />
-                    {[1, 2].map((i) => (
-                        <Skeleton key={i} className="h-80 rounded-2xl" />
-                    ))}
+                <div className="flex-1 py-4 space-y-10">
+                    <Skeleton className="h-12 w-64 rounded-xl bg-muted/20" />
+                    <Skeleton className="h-[400px] w-full rounded-[2rem] bg-muted/20" />
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex gap-8">
-            {/* Left Sidebar - Category Navigation */}
-            <aside className="hidden lg:block w-48 flex-shrink-0 relative">
-                <nav className="sticky top-20 space-y-1 pr-6 border-r border-border/40">
-                    <p className="text-[10px] font-semibold text-muted-foreground/40 uppercase tracking-[0.2em] mb-4 pl-3">
-                        Facilities
+        <div className="flex flex-col lg:flex-row min-h-[calc(100vh-10rem)]">
+            {/* Sidebar - Typographic & Minimal */}
+            <aside className="hidden lg:block w-64 flex-shrink-0 border-r border-border/40 pr-10 py-2">
+                <nav className="sticky top-20 self-start">
+                    <p className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[.25em] mb-8 px-4">
+                        Explore Facilities
                     </p>
-                    {categories.map((category) => (
-                        <button
-                            key={category.type}
-                            onClick={() => scrollToSection(category.type)}
-                            className={cn(
-                                "w-full text-left px-3 py-2 text-sm font-medium transition-colors relative flex items-center",
-                                activeCategory === category.type
-                                    ? "text-primary"
-                                    : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            {/* Active Dot Indicator */}
-                            {activeCategory === category.type && (
-                                <span className="absolute -left-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                            )}
-
-                            <span>{category.config.shortLabel}</span>
-                        </button>
-                    ))}
+                    <div className="space-y-2">
+                        {facilities.map((fac) => (
+                            <button
+                                key={fac.id}
+                                onClick={() => setActiveFacilityId(fac.id)}
+                                className={cn(
+                                    "group w-full text-left px-5 py-3.5 rounded-2xl transition-all duration-500 relative flex items-center justify-between gap-3 border",
+                                    activeFacilityId === fac.id
+                                        ? "bg-primary/[0.04] border-primary/20"
+                                        : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
+                                )}
+                            >
+                                <span className={cn(
+                                    "text-sm font-medium tracking-wide transition-all duration-300",
+                                    activeFacilityId === fac.id
+                                        ? "text-primary translate-x-1"
+                                        : "group-hover:translate-x-0.5"
+                                )}>
+                                    {fac.name}
+                                </span>
+                                <span className={cn(
+                                    "text-[10px] font-mono transition-opacity duration-300",
+                                    activeFacilityId === fac.id ? "opacity-60 text-primary" : "opacity-30"
+                                )}>
+                                    {fac.spaces.length}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </nav>
             </aside>
 
-            {/* Main Content */}
-            <div className="flex-1 py-8 max-w-4xl">
-                {/* Header */}
-                <div className="mb-12">
-                    <h1 className="text-3xl font-medium tracking-tight font-display text-foreground/90">
-                        Facilities
-                    </h1>
-                    <p className="text-muted-foreground/70 mt-2 text-sm max-w-lg">
-                        Discover our world-class sporting facilities, designed for optimal performance and comfort.
-                    </p>
-                </div>
+            {/* Main Content Area */}
+            <main className="flex-1 lg:pl-16 py-2 max-w-6xl">
+                {activeFacility ? (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        {/* Hero - Integrated, Full Bleed Look */}
+                        <div className="relative h-[18rem] sm:h-[22rem] rounded-[2.5rem] overflow-hidden mb-12 shadow-md shadow-primary/5 border border-border/50 group">
+                            {activeFacility.imageUrls?.[0] ? (
+                                <img
+                                    src={activeFacility.imageUrls[0]}
+                                    alt={activeFacility.name}
+                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105"
+                                />
+                            ) : (
+                                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-primary/[0.02] to-background" />
+                            )}
 
-                {/* Category Sections */}
-                <div className="space-y-16">
-                    {categories.map((category) => (
-                        <section
-                            key={category.type}
-                            id={`facility-${category.type}`}
-                            ref={(el) => { sectionRefs.current[category.type] = el; }}
-                            className="scroll-mt-20"
-                        >
-                            <CategorySection
-                                category={category}
-                                orgSlug={orgSlug}
-                            />
-                        </section>
-                    ))}
-                </div>
+                            {/* Sophisticated Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent" />
 
-                {/* Empty State */}
-                {categories.length === 0 && (
-                    <div className="text-center py-16 border border-dashed border-border rounded-xl">
-                        <MapPin className="h-10 w-10 mx-auto text-muted-foreground/40 mb-4" />
-                        <p className="text-lg font-medium mb-2">No facilities available</p>
-                        <p className="text-muted-foreground text-sm">
-                            Contact your administrator to set up booking spaces.
+                            <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12">
+                                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
+                                                {activeFacility.type}
+                                            </span>
+                                            {activeFacility.spaces.length > 0 && (
+                                                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
+                                                    {activeFacility.spaces.length} Modern {activeFacility.spaces.length === 1 ? 'Space' : 'Spaces'} Available
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h1 className="text-4xl sm:text-5xl font-display tracking-tight text-foreground leading-[1.1] font-medium">
+                                            {activeFacility.name}
+                                        </h1>
+                                    </div>
+
+                                    <Link href={`/org/${orgSlug}/book?facilityId=${activeFacility.id}`}>
+                                        <Button size="lg" className="h-12 px-8 rounded-2xl text-sm font-semibold shadow-lg shadow-primary/10 hover:shadow-primary/20 transition-all duration-300">
+                                            <Calendar className="h-4 w-4 mr-2.5 opacity-70" />
+                                            Book A Slot
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Integrated Details Sections */}
+                        <div className="grid lg:grid-cols-12 gap-x-12 px-2">
+                            <div className="lg:col-span-7 space-y-16">
+                                {/* About Section */}
+                                <section>
+                                    <div className="flex items-center gap-3 mb-6 text-muted-foreground/40 uppercase tracking-[.2em] text-[11px] font-bold">
+                                        <Info className="h-4 w-4" />
+                                        About
+                                    </div>
+                                    <p className="text-xl text-foreground/80 leading-relaxed font-light">
+                                        {activeFacility.description || "Experience excellence in our state-of-the-art facilities. Designed for both professional athletes and enthusiasts, our spaces provide the perfect environment for your session."}
+                                    </p>
+                                </section>
+
+                                {/* Location & Details Grid */}
+                                <div className="grid sm:grid-cols-2 gap-12 pt-4">
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-6 text-muted-foreground/40 uppercase tracking-[.2em] text-[11px] font-bold">
+                                            <MapPin className="h-4 w-4" />
+                                            Location
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-lg text-foreground/90 font-medium leading-snug">
+                                                {activeFacility.location || "Sports Complex Main Wing"}
+                                            </p>
+                                            {activeFacility.mapLink && (
+                                                <a
+                                                    href={activeFacility.mapLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/70 transition-colors font-semibold group"
+                                                >
+                                                    Open Navigation
+                                                    <ExternalLink className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                                </a>
+                                            )}
+                                        </div>
+                                    </section>
+
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-6 text-muted-foreground/40 uppercase tracking-[.2em] text-[11px] font-bold">
+                                            <Clock className="h-4 w-4" />
+                                            Schedule
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-lg text-foreground/90 font-medium">
+                                                {activeFacility.rules?.openTime || "06:00"} — {activeFacility.rules?.closeTime || "22:00"}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground font-medium">
+                                                Available daily for bookings
+                                            </p>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+
+                            {/* Guidelines Section - On the right */}
+                            <aside className="lg:col-span-5 lg:border-l border-border/40 lg:pl-10 mt-16 lg:mt-0">
+                                <div className="flex items-center gap-3 mb-8 text-muted-foreground/40 uppercase tracking-[.2em] text-[11px] font-bold">
+                                    <ShieldCheck className="h-4 w-4" />
+                                    Facility Guidelines
+                                </div>
+                                <div className="space-y-6">
+                                    {(activeFacility.guidelines?.length ? activeFacility.guidelines : [
+                                        "Non-marking shoes are mandatory",
+                                        "Bring your own sports equipment",
+                                        "Arrive 10 minutes prior to your slot",
+                                        "Respect fellow players and staff"
+                                    ]).map((rule, idx) => (
+                                        <div key={idx} className="group flex gap-5 text-sm text-foreground/70 leading-relaxed font-medium">
+                                            <span className="flex-shrink-0 text-primary/30 font-mono text-[10px] tabular-nums mt-1 select-none text-right w-5">
+                                                {(idx + 1).toString().padStart(2, '0')}
+                                            </span>
+                                            <span className="transition-colors group-hover:text-foreground">
+                                                {rule}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </aside>
+                        </div>
+
+
+
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-muted/20 rounded-[3rem] bg-muted/5">
+                        <MapPin className="h-16 w-16 text-muted-foreground/10 mb-8" />
+                        <h2 className="text-3xl font-display font-medium mb-4">Discovery Awaits</h2>
+                        <p className="text-muted-foreground text-center max-w-sm font-light px-8">
+                            We're currently preparing our world-class facilities. Please check back shortly.
                         </p>
                     </div>
                 )}
-            </div>
+            </main>
         </div>
     );
 }
 
-/** Category Section Component */
-function CategorySection({
-    category,
-    orgSlug,
-}: {
-    category: CategoryData;
-    orgSlug: string;
-}) {
-    const { config, spaces, totalCapacity, operatingHours, type } = category;
 
-    return (
-        <div className="group">
-            {/* Hero Image with Gradient Overlay */}
-            <div className="relative h-48 rounded-2xl overflow-hidden bg-gradient-to-br from-muted/50 to-muted/30 mb-6">
-                {/* Placeholder gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
 
-                {/* Category Label Overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background/90 via-background/60 to-transparent">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-2xl font-display font-medium text-foreground">
-                                {config.label}
-                            </h2>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                {spaces.length} {spaces.length === 1 ? 'space' : 'spaces'} available
-                            </p>
-                        </div>
-                        <Link href={`/org/${orgSlug}/book?category=${type}`}>
-                            <Button className="shadow-lg">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Book Now
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
-            </div>
-
-            {/* Content Grid */}
-            <div className="grid md:grid-cols-2 gap-6">
-                {/* Left Column - About & Location */}
-                <div className="space-y-6">
-                    {/* About */}
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                            <Info className="h-4 w-4" />
-                            <span className="uppercase tracking-wider text-xs">About</span>
-                        </div>
-                        <p className="text-sm text-foreground/80 leading-relaxed">
-                            {config.description}
-                        </p>
-                    </div>
-
-                    {/* Location */}
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span className="uppercase tracking-wider text-xs">Location</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm text-foreground/80">
-                                {config.location}
-                            </p>
-                            <button className="text-xs text-primary hover:underline flex items-center gap-1">
-                                View on map
-                                <ExternalLink className="h-3 w-3" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Quick Stats */}
-                    <div className="flex items-center gap-6 pt-4 border-t border-border/40">
-                        <div className="flex items-center gap-2 text-sm">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-foreground/80">{totalCapacity} spots total</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-foreground/80">{operatingHours}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column - Rules & Guidelines */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <ShieldCheck className="h-4 w-4" />
-                        <span className="uppercase tracking-wider text-xs">Rules & Guidelines</span>
-                    </div>
-                    <ul className="space-y-2">
-                        {config.rules.map((rule, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-sm text-foreground/80">
-                                <ChevronRight className="h-4 w-4 text-primary/60 mt-0.5 flex-shrink-0" />
-                                <span>{rule}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
-
-            {/* Spaces List */}
-            <div className="mt-6 pt-6 border-t border-border/30">
-                <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-3">
-                    Available Spaces
-                </p>
-                <div className="flex flex-wrap gap-2">
-                    {spaces.map((space) => (
-                        <span
-                            key={space.id}
-                            className="px-3 py-1.5 rounded-full bg-muted/50 text-xs font-medium text-muted-foreground border border-border/40"
-                        >
-                            {space.name}
-                        </span>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}
