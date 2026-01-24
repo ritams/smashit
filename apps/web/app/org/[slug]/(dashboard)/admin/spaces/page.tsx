@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ImageUpload } from "@/components/ui/image-upload";
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Dialog,
@@ -40,6 +41,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api } from '@/lib/api-client';
+import { API_URL } from '@/lib/config';
 
 // Space type configuration
 
@@ -595,11 +597,24 @@ function FacilityDialogContents({ editingFacility, isSubmitting, onSubmit, onCan
                             </Select>
                         </div>
                     </div>
+
+                    <div className="space-y-3">
+                        <Label className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[.2em] ml-1">Hero Image</Label>
+                        <div className="flex justify-center p-4 border-2 border-dashed border-border/40 hover:border-border/60 rounded-2xl transition-all">
+                            <ImageUpload
+                                name="Facility"
+                                currentImageUrl={imageUrl}
+                                uploadMode="generic"
+                                onUploadComplete={(url) => setImageUrl(url)}
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-3">
                         <Label className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[.2em] ml-1">About</Label>
                         <textarea
                             value={description} onChange={e => setDescription(e.target.value)}
-                            className="flex min-h-[120px] w-full rounded-2xl border border-border/40 bg-background/50 px-5 py-4 text-sm font-medium leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                            className="flex min-h-[120px] w-full rounded-2xl border border-border/40 bg-background/50 px-5 py-4 text-sm font-medium leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all text-foreground placeholder:text-muted-foreground"
                             placeholder="Tell users about this facility..."
                         />
                     </div>
@@ -608,10 +623,7 @@ function FacilityDialogContents({ editingFacility, isSubmitting, onSubmit, onCan
                             <Label className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[.2em] ml-1">Location</Label>
                             <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Main Block" className="rounded-2xl h-12 bg-background/50 border-border/40 focus:ring-primary/10" />
                         </div>
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[.2em] ml-1">Hero Image URL</Label>
-                            <Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="rounded-2xl h-12 bg-background/50 border-border/40 focus:ring-primary/10" />
-                        </div>
+                        {/* Removed manual image URL input in favor of uploader */}
                     </div>
                     <div className="space-y-3">
                         <Label className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[.2em] ml-1">Map Navigation Link</Label>

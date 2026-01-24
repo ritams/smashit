@@ -15,7 +15,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { getInitials } from "@/lib/utils"
-
+import { useUser } from "@/hooks/use-user"
 import { clearTokenCache } from "@/lib/api-client"
 
 interface UserNavProps {
@@ -29,9 +29,9 @@ export function UserNav({
     isAdmin = false,
     showDashboardLink = false,
 }: UserNavProps) {
-    const { data: session } = useSession()
+    const { user } = useUser();
 
-    if (!session?.user) {
+    if (!user) {
         return null;
     }
 
@@ -47,20 +47,20 @@ export function UserNav({
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full md:h-auto md:w-auto md:px-2 md:py-1.5 md:rounded-xl data-[state=open]:bg-muted hover:bg-muted/60 transition-all duration-200">
                     <Avatar className="h-8 w-8 transition-transform group-active:scale-95">
-                        <AvatarImage src={session.user.image || ''} alt={session.user.name || ''} />
+                        <AvatarImage src={user.image || ''} alt={user.name || ''} />
                         <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                            {getInitials(session.user.name || 'U')}
+                            {getInitials(user.name || 'U')}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start gap-0.5 ml-3 hidden md:flex text-left">
-                        <span className="text-sm font-medium leading-none text-foreground/90">{session.user.name}</span>
+                        <span className="text-sm font-medium leading-none text-foreground/90">{user.name}</span>
                     </div>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-60 p-2" align="end" forceMount>
                 <div className="md:hidden p-2 pb-3 mb-1 border-b border-border/50">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{session.user.name}</p>
+                        <p className="text-sm font-medium leading-none">{user.name}</p>
                     </div>
                 </div>
 
@@ -95,7 +95,7 @@ export function UserNav({
                         <DropdownMenuItem asChild className="cursor-pointer py-2.5">
                             <Link href="/dashboard" className="flex items-center gap-2.5">
                                 <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-                                <span>Go to Dashboard</span>
+                                <span className="">Go to Dashboard</span>
                             </Link>
                         </DropdownMenuItem>
                     )}

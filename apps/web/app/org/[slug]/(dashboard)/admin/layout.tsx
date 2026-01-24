@@ -50,14 +50,11 @@ export default function AdminLayout({
     return (
         <div className="flex flex-col lg:flex-row h-full min-h-[calc(100vh-4rem)]">
             {/* Sidebar Navigation */}
-            <aside className="hidden lg:block w-72 border-r border-border/40 pr-10 py-10 flex-shrink-0 sticky top-[3.5rem] h-[calc(100vh-3.5rem)] self-start overflow-y-auto no-scrollbar">
-                <div className="px-5 mb-12">
+            <aside className="hidden lg:block w-64 border-r border-border/40 pr-6 py-10 flex-shrink-0 sticky top-[3.5rem] h-[calc(100vh-3.5rem)] self-start overflow-y-auto no-scrollbar">
+                <div className="px-5 mb-8">
                     <p className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[.25em] mb-2">
                         Admin Console
                     </p>
-                    <h2 className="font-display text-2xl font-medium tracking-tight text-foreground">
-                        Management
-                    </h2>
                 </div>
                 <nav className="space-y-1">
                     {navItems.map((item) => (

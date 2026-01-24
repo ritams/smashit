@@ -85,9 +85,13 @@ export async function apiClient<T>(
     const { auth = false, ...fetchOptions } = options;
 
     const headers: HeadersInit = {
-        'Content-Type': 'application/json',
         ...(fetchOptions.headers || {}),
     };
+
+    // Only set JSON content type if it's not FormData
+    if (!(fetchOptions.body instanceof FormData)) {
+        (headers as Record<string, string>)['Content-Type'] = 'application/json';
+    }
 
     // Add auth token if requested
     if (auth) {
@@ -164,6 +168,12 @@ export const api = {
     getMe: () => apiClient<any>('/api/users/me', { auth: true }),
     updateMe: (data: { name?: string; phoneNumber?: string; registrationId?: string }) =>
         apiClient<any>('/api/users/me', { method: 'PATCH', body: JSON.stringify(data), auth: true }),
+    uploadProfileImage: (formData: FormData) =>
+        apiClient<any>('/api/users/image', { method: 'POST', body: formData, auth: true }),
+
+    uploadFile: (formData: FormData) =>
+        apiClient<{ url: string; filename: string }>('/api/uploads', { method: 'POST', body: formData, auth: true }),
+
     getMyOrgs: () => apiClient<any[]>('/api/users/me/orgs', { auth: true }),
 
     // Admin (all authenticated)

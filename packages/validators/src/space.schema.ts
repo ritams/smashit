@@ -4,7 +4,7 @@ export const createFacilitySchema = z.object({
     name: z.string().min(1).max(100),
     description: z.string().max(2000).optional().nullable(),
     type: z.string().optional().default('GENERIC'),
-    imageUrls: z.array(z.string().url()).optional().default([]),
+    imageUrls: z.array(z.string()).optional().default([]), // Allow relative paths
     location: z.string().max(500).optional().nullable(),
     mapLink: z.string().url().optional().nullable(),
     guidelines: z.array(z.string()).optional().default([]),
@@ -14,7 +14,7 @@ export const updateFacilitySchema = z.object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(2000).optional().nullable(),
     type: z.string().optional(),
-    imageUrls: z.array(z.string().url()).optional(),
+    imageUrls: z.array(z.string()).optional(), // Allow relative paths
     location: z.string().max(500).optional().nullable(),
     mapLink: z.string().url().optional().nullable(),
     guidelines: z.array(z.string()).optional(),

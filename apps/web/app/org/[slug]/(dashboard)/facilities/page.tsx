@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import { API_URL } from '@/lib/config';
 
 interface Facility {
     id: string;
@@ -131,7 +132,7 @@ export default function FacilitiesPage() {
                         <div className="relative h-[18rem] sm:h-[22rem] rounded-[2.5rem] overflow-hidden mb-12 shadow-md shadow-primary/5 border border-border/50 group">
                             {activeFacility.imageUrls?.[0] ? (
                                 <img
-                                    src={activeFacility.imageUrls[0]}
+                                    src={activeFacility.imageUrls[0].startsWith('http') ? activeFacility.imageUrls[0] : `${API_URL}${activeFacility.imageUrls[0]}`}
                                     alt={activeFacility.name}
                                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105"
                                 />

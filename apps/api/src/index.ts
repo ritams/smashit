@@ -7,6 +7,7 @@ import { bookingRoutes } from './routes/booking.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
 import { facilityRoutes } from './routes/facility.routes.js';
 import { sseRoutes } from './routes/sse.routes.js';
+import { uploadRoutes } from './routes/upload.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/request-logger.middleware.js';
 import { startBookingWorker } from './workers/booking.worker.js';
@@ -20,7 +21,6 @@ const PORT = process.env.PORT || 4000;
 // Validate environment on startup
 validateEnv();
 
-// Middleware
 // Middleware
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',').map(o => o.trim());
 log.info('Configured CORS Origins', { origins: allowedOrigins });
@@ -56,7 +56,7 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
-        correlationId: req.correlationId,
+        correlationId: (req as any).correlationId,
     });
 });
 
@@ -68,7 +68,7 @@ app.use('/api/orgs/:slug/admin', adminRoutes);
 app.use('/api/orgs/:slug/facilities', facilityRoutes);
 app.use('/api/orgs', orgRoutes);
 app.use('/api/events', sseRoutes);
-
+app.use('/api/uploads', uploadRoutes);
 
 // 404 Handler
 app.use((_req, _res, next) => {
@@ -94,4 +94,3 @@ async function start() {
 }
 
 start();
-

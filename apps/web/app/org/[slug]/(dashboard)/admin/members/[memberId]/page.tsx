@@ -13,12 +13,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { getInitials } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import { API_URL } from '@/lib/config';
 
 interface Member {
     id: string;
     name: string | null;
     email: string | null;
-    image: string | null;
+    avatarUrl: string | null;
     role: string;
     createdAt?: string; // Optional if not guaranteed by API
 }
@@ -98,7 +99,7 @@ export default function MemberProfilePage() {
                     <Card className="w-full md:w-auto md:min-w-[300px]">
                         <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
                             <Avatar className="h-32 w-32 shadow-xl ring-4 ring-background">
-                                <AvatarImage src={member.image || ''} />
+                                <AvatarImage src={member.avatarUrl && !member.avatarUrl.startsWith('http') ? `${API_URL}${member.avatarUrl}` : (member.avatarUrl || '')} />
                                 <AvatarFallback className="text-4xl bg-muted">
                                     {getInitials(member.name || 'U')}
                                 </AvatarFallback>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
+import { API_URL } from '@/lib/config';
 import type { SpaceAvailability } from '../types/booking.types';
 
 interface UseSpaceAvailabilityResult {
@@ -29,7 +30,22 @@ export function useSpaceAvailability(
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
             const res = await api.getAllAvailability(orgSlug, dateStr);
-            setData(res);
+
+            // Fix user avatar URLs
+            const fixedData = res.map((item: SpaceAvailability) => ({
+                ...item,
+                slots: item.slots.map(slot => ({
+                    ...slot,
+                    bookings: slot.bookings?.map(booking => ({
+                        ...booking,
+                        userAvatar: booking.userAvatar && !booking.userAvatar.startsWith('http')
+                            ? `${API_URL}${booking.userAvatar}`
+                            : booking.userAvatar
+                    }))
+                }))
+            }));
+
+            setData(fixedData);
         } catch (error) {
             console.error(error);
             toast.error('Failed to load spaces');

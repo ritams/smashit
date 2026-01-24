@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials, cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import { API_URL } from '@/lib/config';
 import {
     Table,
     TableBody,
@@ -24,7 +25,7 @@ interface Member {
     id: string;
     name: string | null;
     email: string | null;
-    image: string | null;
+    avatarUrl: string | null;
     role: string;
 }
 
@@ -137,7 +138,7 @@ export default function MembersPage() {
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
                                                 <Avatar className="h-11 w-11 rounded-xl ring-2 ring-background border border-border/10">
-                                                    <AvatarImage src={member.image || ''} className="object-cover" />
+                                                    <AvatarImage src={member.avatarUrl && !member.avatarUrl.startsWith('http') ? `${API_URL}${member.avatarUrl}` : (member.avatarUrl || '')} className="object-cover" />
                                                     <AvatarFallback className="bg-primary/[0.03] text-primary/60 text-xs font-bold leading-none">
                                                         {getInitials(member.name || 'U')}
                                                     </AvatarFallback>
