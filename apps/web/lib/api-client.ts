@@ -26,24 +26,23 @@ async function getSessionToken(): Promise<string | null> {
     }
 
     try {
-        // Double-check session existence first (fastest check usually)
-        // Note: we could skip this and go straight to token if we trust 401 handling,
-        // but this checks if the next-auth session layer considers us logged in.
         const res = await fetch('/api/auth/session');
         if (!res.ok) {
+            console.error('[API Client] Session check failed:', res.status);
             cachedToken = null;
             return null;
         }
 
         const session = await res.json();
         if (!session?.user?.email) {
+            console.warn('[API Client] No active session found');
             cachedToken = null;
             return null;
         }
 
-        // Get the JWT token from cookies (next-auth stores it securely)
         const tokenRes = await fetch('/api/auth/token');
         if (!tokenRes.ok) {
+            console.error('[API Client] Token fetch failed:', tokenRes.status);
             cachedToken = null;
             return null;
         }
@@ -51,16 +50,16 @@ async function getSessionToken(): Promise<string | null> {
         const { token } = await tokenRes.json();
 
         if (token) {
+            console.log('[API Client] Token successfully obtained');
             cachedToken = token;
-            // Set simplistic expiry - 5 minutes or until 401
-            // We don't parse the JWT here to save bundle size/complexity, 
-            // we just assume it's good for a bit.
             tokenExpiry = now + (5 * 60 * 1000);
             return token;
         }
 
+        console.warn('[API Client] Session exists but token is null');
         return null;
-    } catch {
+    } catch (err) {
+        console.error('[API Client] Error in getSessionToken:', err);
         cachedToken = null;
         return null;
     }

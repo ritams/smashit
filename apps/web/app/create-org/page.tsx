@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 export default function CreateOrgPage() {
     const { data: session, status } = useSession();
@@ -43,12 +43,8 @@ export default function CreateOrgPage() {
         const timer = setTimeout(async () => {
             setCheckingSlug(true);
             try {
-                const res = await fetch(`${API_URL}/api/orgs/check-slug/${slug}`);
-                if (!res.ok) {
-                    throw new Error(`Server error: ${res.status}`);
-                }
-                const data = await res.json();
-                setSlugAvailable(data.data?.available ?? false);
+                const data = await api.checkSlug(slug);
+                setSlugAvailable(data?.available ?? false);
                 setError('');
             } catch (err: any) {
                 console.error('Slug check failed:', err);
@@ -69,24 +65,7 @@ export default function CreateOrgPage() {
         setError('');
 
         try {
-            const res = await fetch(`${API_URL}/api/orgs`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-email': session.user.email || '',
-                    'x-user-name': session.user.name || '',
-                    'x-user-google-id': (session.user as any).googleId || '',
-                    'x-user-avatar': session.user.image || '',
-                },
-                body: JSON.stringify({ name, slug }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error?.message || 'Failed to create organization');
-            }
-
+            await api.createOrg({ name, slug });
             // Redirect to the org's admin page
             router.push(`/org/${slug}/admin`);
         } catch (err: any) {

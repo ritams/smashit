@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { API_URL } from '@/lib/config';
+import { api } from '@/lib/api-client';
 
 export default function OrgLoginPage() {
     const { data: session, status } = useSession();
@@ -20,15 +20,10 @@ export default function OrgLoginPage() {
     useEffect(() => {
         async function fetchOrg() {
             try {
-                const res = await fetch(`${API_URL}/api/orgs/${orgSlug}`);
-                if (!res.ok) {
-                    setError('Organization not found');
-                    return;
-                }
-                const data = await res.json();
-                setOrgName(data.data?.name || orgSlug);
+                const data = await api.getOrg(orgSlug);
+                setOrgName(data?.name || orgSlug);
             } catch (err) {
-                setError('Failed to load organization');
+                setError('Organization not found');
             }
         }
         fetchOrg();

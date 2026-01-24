@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { getInitials } from "@/lib/utils"
 
+import { clearTokenCache } from "@/lib/api-client"
+
 interface UserNavProps {
     orgSlug?: string
     isAdmin?: boolean
@@ -34,6 +36,7 @@ export function UserNav({
     }
 
     const handleLogout = async () => {
+        clearTokenCache()
         // If inside an org, redirect to org login, otherwise home
         const callbackUrl = orgSlug ? `/org/${orgSlug}/login` : '/'
         await signOut({ callbackUrl })
