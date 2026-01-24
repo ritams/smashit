@@ -62,6 +62,9 @@ interface BookingRules {
     maxDurationMin: number;
     allowRecurring: boolean;
     bufferMinutes: number;
+    maxBookingsPerUserPerDay?: number | null;
+    maxTotalBookingsPerDay?: number | null;
+    maxActiveBookingsPerUser?: number | null;
 }
 
 interface Slot {
@@ -431,7 +434,7 @@ export default function SpacesPage() {
                             </TabsContent>
 
                             <TabsContent value="rules" className="space-y-6">
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-2 gap-6 pb-6 border-b">
                                     <div className="space-y-2">
                                         <Label>Open Time</Label>
                                         <Input type="time" defaultValue={editingSpace.rules?.openTime} id="openTime" />
@@ -450,27 +453,80 @@ export default function SpacesPage() {
                                     </div>
                                 </div>
 
+                                <div className="space-y-4 pt-2">
+                                    <h4 className="text-sm font-medium text-foreground/80">Usage Limits</h4>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label className="flex items-center gap-1.5">
+                                                Daily Limit (Per User)
+                                                <span className="text-[10px] text-muted-foreground font-normal">(Per Space Type)</span>
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                defaultValue={editingSpace.rules?.maxBookingsPerUserPerDay || ''}
+                                                id="maxBookingsPerUserPerDay"
+                                                placeholder="Unlimited"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">Max slots a user can book across all {SPACE_TYPES[editingSpace.type]?.label || 'same type'} spaces per day.</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Daily Limit (Total Space)</Label>
+                                            <Input
+                                                type="number"
+                                                defaultValue={editingSpace.rules?.maxTotalBookingsPerDay || ''}
+                                                id="maxTotalBookingsPerDay"
+                                                placeholder="Unlimited"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">Total slots available for this specific space per day.</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Max Active Bookings</Label>
+                                            <Input
+                                                type="number"
+                                                defaultValue={editingSpace.rules?.maxActiveBookingsPerUser || ''}
+                                                id="maxActiveBookingsPerUser"
+                                                placeholder="Unlimited"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">How many future/ongoing bookings a user can have at once.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="flex items-center gap-4 pt-6 border-t mt-4">
                                     <Button variant="outline" className="flex-1" onClick={() => {
-                                        const rules = {
-                                            openTime: (document.getElementById('openTime') as HTMLInputElement).value,
-                                            closeTime: (document.getElementById('closeTime') as HTMLInputElement).value,
-                                            maxAdvanceDays: parseInt((document.getElementById('maxAdvanceDays') as HTMLInputElement).value),
-                                            maxDurationMin: parseInt((document.getElementById('maxDurationMin') as HTMLInputElement).value),
+                                        const getVal = (id: string) => {
+                                            const el = document.getElementById(id) as HTMLInputElement;
+                                            return el?.value ? (id.includes('Time') ? el.value : parseInt(el.value)) : null;
                                         };
-                                        handleUpdateRules(rules, true);
+                                        const rules = {
+                                            openTime: getVal('openTime'),
+                                            closeTime: getVal('closeTime'),
+                                            maxAdvanceDays: getVal('maxAdvanceDays'),
+                                            maxDurationMin: getVal('maxDurationMin'),
+                                            maxBookingsPerUserPerDay: getVal('maxBookingsPerUserPerDay'),
+                                            maxTotalBookingsPerDay: getVal('maxTotalBookingsPerDay'),
+                                            maxActiveBookingsPerUser: getVal('maxActiveBookingsPerUser'),
+                                        };
+                                        handleUpdateRules(rules as any, true);
                                     }}>
                                         <Copy className="mr-2 h-4 w-4" />
-                                        Apply to All Spaces
+                                        Apply to All
                                     </Button>
                                     <Button className="flex-1" onClick={() => {
-                                        const rules = {
-                                            openTime: (document.getElementById('openTime') as HTMLInputElement).value,
-                                            closeTime: (document.getElementById('closeTime') as HTMLInputElement).value,
-                                            maxAdvanceDays: parseInt((document.getElementById('maxAdvanceDays') as HTMLInputElement).value),
-                                            maxDurationMin: parseInt((document.getElementById('maxDurationMin') as HTMLInputElement).value),
+                                        const getVal = (id: string) => {
+                                            const el = document.getElementById(id) as HTMLInputElement;
+                                            return el?.value ? (id.includes('Time') ? el.value : parseInt(el.value)) : null;
                                         };
-                                        handleUpdateRules(rules, false);
+                                        const rules = {
+                                            openTime: getVal('openTime'),
+                                            closeTime: getVal('closeTime'),
+                                            maxAdvanceDays: getVal('maxAdvanceDays'),
+                                            maxDurationMin: getVal('maxDurationMin'),
+                                            maxBookingsPerUserPerDay: getVal('maxBookingsPerUserPerDay'),
+                                            maxTotalBookingsPerDay: getVal('maxTotalBookingsPerDay'),
+                                            maxActiveBookingsPerUser: getVal('maxActiveBookingsPerUser'),
+                                        };
+                                        handleUpdateRules(rules as any, false);
                                     }}>
                                         {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Save Rules

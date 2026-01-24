@@ -26,6 +26,8 @@ function getSlotName(type: string, number: number): string {
     return `${prefix} ${number}`;
 }
 
+import { OrgService } from '../services/org.service.js';
+
 /** Update organization settings (allowed domains/emails) */
 export async function updateSettings(req: AuthRequest, res: Response, next: NextFunction) {
     try {
@@ -34,6 +36,10 @@ export async function updateSettings(req: AuthRequest, res: Response, next: Next
             where: { id: req.org!.id },
             data: { allowedDomains: data.allowedDomains, allowedEmails: data.allowedEmails },
         });
+
+        // Invalidate cache immediately so new settings are visible
+        await OrgService.invalidateOrgCache(req.org!.slug);
+
         res.json({ success: true, data: org });
     } catch (error) {
         next(error);

@@ -112,4 +112,18 @@ export class OrgService {
 
         return { ...org, role: 'ADMIN' };
     }
+
+    /**
+     * Invalidate the organization cache
+     */
+    static async invalidateOrgCache(slug: string) {
+        if (!redisClient) return;
+        const cacheKey = `org:slug:${slug}`;
+        try {
+            await redisClient.del(cacheKey);
+            log.info('Org cache invalidated', { slug });
+        } catch (err) {
+            log.warn('Failed to invalidate org cache', { slug, error: (err as Error).message });
+        }
+    }
 }

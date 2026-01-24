@@ -201,9 +201,20 @@ const BOOKING_ERROR_MAP: Record<string, { code: string; message: string; status:
     'MAX_BOOKINGS_PER_USER_PER_DAY_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'You have reached your daily booking limit for this space', status: 400 },
     'MAX_TOTAL_BOOKINGS_PER_DAY_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'This space has reached its daily booking limit', status: 400 },
     'MAX_ACTIVE_BOOKINGS_EXCEEDED': { code: 'LIMIT_EXCEEDED', message: 'You have too many active bookings', status: 400 },
+    'USER_ALREADY_BOOKED_AT_THIS_TIME': { code: 'OVERLAP', message: 'You already have another booking during this time', status: 409 },
     'SPACE_NOT_FOUND': { code: 'SPACE_NOT_FOUND', message: 'Space not found', status: 404 },
 };
 
 function mapBookingError(message: string) {
+    if (message.startsWith('USER_ALREADY_BOOKED_AT_THIS_TIME')) {
+        const [_, spaceName] = message.split('|');
+        return {
+            code: 'OVERLAP',
+            message: spaceName
+                ? `You already have a booking in "${spaceName}" during this time`
+                : 'You already have another booking during this time',
+            status: 409
+        };
+    }
     return BOOKING_ERROR_MAP[message];
 }

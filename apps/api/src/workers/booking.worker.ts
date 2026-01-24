@@ -128,6 +128,23 @@ export const processBooking = async (job: Job<BookingJobData>) => {
                 throw new Error('MAX_ACTIVE_BOOKINGS_EXCEEDED');
             }
         }
+
+        // 7. Check for overlapping bookings for the SAME USER across ALL spaces in the organization
+        const overlappingUserBooking = await prisma.booking.findFirst({
+            where: {
+                userId,
+                status: 'CONFIRMED',
+                AND: [
+                    { startTime: { lt: end } },
+                    { endTime: { gt: start } }
+                ]
+            },
+            select: { id: true, space: { select: { name: true } } }
+        });
+
+        if (overlappingUserBooking) {
+            throw new Error(`USER_ALREADY_BOOKED_AT_THIS_TIME|${overlappingUserBooking.space.name}`);
+        }
     }
 
 
