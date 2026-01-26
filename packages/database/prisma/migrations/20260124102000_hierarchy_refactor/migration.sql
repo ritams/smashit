@@ -20,17 +20,17 @@ ALTER TABLE "BookingRules" DROP CONSTRAINT "BookingRules_spaceId_fkey";
 DROP INDEX "BookingRules_spaceId_key";
 
 -- AlterTable
-ALTER TABLE "BookingRules" DROP COLUMN "spaceId",
-ADD COLUMN     "facilityId" TEXT NOT NULL;
+ALTER TABLE "BookingRules" ALTER COLUMN "spaceId" DROP NOT NULL,
+ADD COLUMN     "facilityId" TEXT;
 
 -- AlterTable
-ALTER TABLE "Space" DROP COLUMN "description",
-DROP COLUMN "guidelines",
-DROP COLUMN "imageUrls",
-DROP COLUMN "location",
-DROP COLUMN "mapLink",
-DROP COLUMN "type",
-ADD COLUMN     "facilityId" TEXT NOT NULL;
+ALTER TABLE "Space" -- DROP COLUMN "description",
+-- DROP COLUMN "guidelines",
+-- DROP COLUMN "imageUrls",
+-- DROP COLUMN "location",
+-- DROP COLUMN "mapLink",
+-- DROP COLUMN "type",
+ADD COLUMN     "facilityId" TEXT;
 
 -- CreateTable
 CREATE TABLE "Facility" (

@@ -1,12 +1,12 @@
 -- AlterTable
-ALTER TABLE "Booking" ADD COLUMN     "recurrenceGroupId" TEXT;
+ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "recurrenceGroupId" TEXT;
 
 -- AlterTable
-ALTER TABLE "Organization" ADD COLUMN     "allowedDomains" TEXT[] DEFAULT ARRAY[]::TEXT[],
-ADD COLUMN     "allowedEmails" TEXT[] DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "allowedDomains" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN IF NOT EXISTS "allowedEmails" TEXT[] DEFAULT ARRAY[]::TEXT[];
 
 -- AlterTable
-ALTER TABLE "Space" ADD COLUMN     "guidelines" TEXT[] DEFAULT ARRAY[]::TEXT[],
-ADD COLUMN     "imageUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
-ADD COLUMN     "location" TEXT,
-ADD COLUMN     "mapLink" TEXT;
+ALTER TABLE "Space" ADD COLUMN IF NOT EXISTS "guidelines" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN IF NOT EXISTS "imageUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN IF NOT EXISTS "location" TEXT,
+ADD COLUMN IF NOT EXISTS "mapLink" TEXT;

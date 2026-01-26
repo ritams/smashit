@@ -5,39 +5,40 @@
  * Run this script BEFORE enforcing the 'Required' constraint on facilityId in production.
  */
 
-import { PrismaClient } from '@avith/database';
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function migrate() {
     console.log('🚀 Starting Production Migration: Spaces to Facilities...');
 
-    // 1. Get all organizations
-    const orgs = await prisma.organization.findMany({
-        include: {
-            spaces: {
-                where: {
-                    facilityId: null as any // Using 'any' to handle the case where the field might not yet be in the generated client or is optional
-                }
-            }
-        }
-    });
+    // 1. Get all orphaned spaces using Raw SQL to bypass Schema Validation (facilityId is required in schema but null in DB)
+    // AND to ensure we fetch 'type' column which was removed from schema but preserved in DB.
+    const allOrphanedSpaces: any[] = await prisma.$queryRaw`SELECT * FROM "Space" WHERE "facilityId" IS NULL`;
 
-    console.log(`📊 Found ${orgs.length} organizations to check.`);
+    console.log(`📊 Found ${allOrphanedSpaces.length} total orphaned spaces to migrate.`);
 
-    for (const org of orgs) {
-        const orphanedSpaces = org.spaces;
+    // Group by OrgId
+    const spacesByOrg: Record<string, any[]> = {};
+    for (const space of allOrphanedSpaces) {
+        if (!spacesByOrg[space.orgId]) spacesByOrg[space.orgId] = [];
+        spacesByOrg[space.orgId].push(space);
+    }
 
-        if (orphanedSpaces.length === 0) {
-            console.log(`✅ Organization ${org.slug}: No orphaned spaces found.`);
-            continue;
-        }
+    const orgIds = Object.keys(spacesByOrg);
+    console.log(`found ${orgIds.length} organizations with orphaned spaces.`);
+
+    for (const orgId of orgIds) {
+        const orphanedSpaces = spacesByOrg[orgId];
+        const org = await prisma.organization.findUnique({ where: { id: orgId } });
+
+        if (!org) continue;
 
         console.log(`🔧 Organization ${org.slug}: Migrating ${orphanedSpaces.length} orphaned spaces...`);
 
         // Group spaces by type to create logical facilities
         const spacesByType: Record<string, typeof orphanedSpaces> = {};
         orphanedSpaces.forEach(space => {
-            const type = (space as any).type || 'GENERIC';
+            const type = space.type || 'GENERIC';
             if (!spacesByType[type]) spacesByType[type] = [];
             spacesByType[type].push(space);
         });

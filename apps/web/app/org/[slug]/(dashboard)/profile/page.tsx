@@ -53,8 +53,8 @@ export default function ProfilePage() {
             setIsSaving(true);
             await api.updateMe({
                 name,
-                phoneNumber: phoneNumber || null,
-                registrationId: registrationId || null
+                phoneNumber: phoneNumber || undefined,
+                registrationId: registrationId || undefined
             });
 
             toast.success("Profile updated successfully");

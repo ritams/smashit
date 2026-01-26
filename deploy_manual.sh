@@ -17,7 +17,15 @@ pnpm install --frozen-lockfile
 # Generate Database Client & Sync Schema Safely
 echo "🗄️  Generating Database Client & Deploying Migrations..."
 pnpm db:generate
-pnpm prisma migrate deploy --schema packages/database/prisma/schema.prisma
+# Baseline the initial migration for existing production database
+echo "⚖️  Baselining initial migration..."
+pnpm --filter @avith/database exec prisma migrate resolve --applied 20260117122541_add_user_profile_fields || echo "Baseline skipped or already applied"
+
+pnpm --filter @avith/database exec prisma migrate deploy
+
+# Run data migration script (backfill Facility IDs)
+echo "📦 Running data migration..."
+pnpm --filter @avith/database exec tsx ../../scripts/prod-migration-v1.ts
 
 
 
