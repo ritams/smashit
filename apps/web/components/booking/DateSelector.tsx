@@ -76,6 +76,7 @@ export function DateSelector({
                     <button
                         className="p-1.5 text-muted-foreground hover:text-foreground transition-colors hover:bg-muted rounded-full"
                         onClick={() => onViewDateChange(addDays(viewDate, -7))}
+                        title="Previous week"
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </button>
@@ -113,26 +114,44 @@ export function DateSelector({
                     <button
                         className="p-1.5 text-muted-foreground hover:text-foreground transition-colors hover:bg-muted rounded-full"
                         onClick={() => onViewDateChange(addDays(viewDate, 7))}
+                        title="Next week"
                     >
                         <ChevronRight className="h-4 w-4" />
                     </button>
                 </div>
 
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button className="font-display text-lg font-medium text-foreground tracking-tight hover:text-primary transition-colors">
-                            {format(selectedDate, 'MMMM yyyy')}
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => date && onSelectDate(date)}
-                            initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => {
+                            const today = startOfToday();
+                            onSelectDate(today);
+                            onViewDateChange(today);
+                        }}
+                        className="h-8 px-3 rounded-full bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest transition-all border border-primary/10"
+                    >
+                        Today
+                    </button>
+
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button className="font-display text-lg font-medium text-foreground tracking-tight hover:text-primary transition-colors flex items-center gap-2">
+                                {format(
+                                    weekDates.some(d => isSameDay(d, selectedDate)) ? selectedDate : viewDate,
+                                    'MMMM yyyy'
+                                )}
+                                <CalendarIcon className="h-3.5 w-3.5 opacity-30" />
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={(date) => date && onSelectDate(date)}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
             </div>
         </>
     );
