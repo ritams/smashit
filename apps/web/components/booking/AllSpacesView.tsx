@@ -117,10 +117,14 @@ export function AllSpacesView({
             return <div className="p-8 text-center text-muted-foreground">Select a space to view availability</div>;
         }
         return (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mb-3" />
-                <p className="text-lg font-medium">No {categoryName ? categoryName.toLowerCase() + ' ' : ''}spaces available</p>
-                <p className="text-sm">Contact your administrator to set up booking spaces.</p>
+            <div className="flex flex-col items-center justify-center py-24 border border-dashed border-border/40 rounded-[1.5rem] bg-muted/[0.02]">
+                <AlertCircle className="h-10 w-10 text-muted-foreground/10 mb-4" />
+                <h3 className="text-lg font-display font-medium text-foreground/80 mb-2">
+                    No {categoryName ? categoryName.toLowerCase() + ' ' : ''}spaces available
+                </h3>
+                <p className="text-muted-foreground/50 max-w-xs text-center text-sm font-light">
+                    Contact your administrator to set up booking spaces.
+                </p>
             </div>
         );
     }

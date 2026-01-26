@@ -125,7 +125,15 @@ export default function FacilitiesPage() {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 lg:pl-16 py-2 max-w-6xl">
+            <main className="flex-1 lg:pl-16 py-2 max-w-4xl">
+                <div className="flex items-end justify-between mb-8">
+                    <div>
+                        <h1 className="text-2xl font-display font-medium text-foreground tracking-tight">
+                            Facilities
+                        </h1>
+                    </div>
+                </div>
+
                 {activeFacility ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                         {/* Hero - Integrated, Full Bleed Look */}
@@ -156,9 +164,9 @@ export default function FacilitiesPage() {
                                                 </span>
                                             )}
                                         </div>
-                                        <h1 className="text-4xl sm:text-5xl font-display tracking-tight text-foreground leading-[1.1] font-medium">
+                                        <h2 className="text-4xl sm:text-5xl font-display tracking-tight text-foreground leading-[1.1] font-medium">
                                             {activeFacility.name}
-                                        </h1>
+                                        </h2>
                                     </div>
 
                                     <Link href={`/org/${orgSlug}/book?facilityId=${activeFacility.id}`}>
@@ -252,15 +260,12 @@ export default function FacilitiesPage() {
                                 </div>
                             </aside>
                         </div>
-
-
-
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-muted/20 rounded-[3rem] bg-muted/5">
-                        <MapPin className="h-16 w-16 text-muted-foreground/10 mb-8" />
-                        <h2 className="text-3xl font-display font-medium mb-4">Discovery Awaits</h2>
-                        <p className="text-muted-foreground text-center max-w-sm font-light px-8">
+                    <div className="flex flex-col items-center justify-center py-24 border border-dashed border-border/40 rounded-[1.5rem] bg-muted/[0.02]">
+                        <MapPin className="h-10 w-10 text-muted-foreground/10 mb-4" />
+                        <h3 className="text-lg font-display font-medium text-foreground/80 mb-2">Discovery Awaits</h3>
+                        <p className="text-muted-foreground/50 max-w-xs text-center text-sm font-light">
                             We're currently preparing our world-class facilities. Please check back shortly.
                         </p>
                     </div>
