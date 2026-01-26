@@ -10,6 +10,25 @@ const log = createLogger('OrgRoutes');
 
 export const orgRoutes: Router = Router();
 
+// Create new organization (authenticated)
+orgRoutes.post('/', authLimiter, authMiddleware, async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+        }
+
+        const data = createOrganizationSchema.parse(req.body);
+        const org = await OrgService.createOrg(data, req.user.id);
+
+        res.status(201).json({
+            success: true,
+            data: org
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
 // Get organization by slug (public)
 orgRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) => {
     try {
